@@ -1,1 +1,1 @@
-# SNetworkAnalysis---SOC526
+# SNA-SOC526
