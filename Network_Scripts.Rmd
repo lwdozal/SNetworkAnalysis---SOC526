@@ -1,0 +1,449 @@
+---
+# title: "network_script"
+# author: "Laura.w.D"
+# date: "5/12/2021"
+output: word_document
+---
+
+output:
+  word_document:
+    reference_docx: word_styles.docx
+editor_options: 
+  chunk_output_type: inline
+  
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list = ls())
+
+```
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+library("statnet")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library("ggplot2")
+library("readxl")
+library("reshape2")
+library("stringr")
+library("RColorBrewer")
+library("flextable")
+library("tibble")
+library("tidyverse")
+library("network")
+library("statnet")
+library("UserNetR")
+library("sna")
+library("corrplot")
+library("devtools")
+
+
+```
+
+## Setup
+```{r echo=FALSE message=FALSE, warning=FALSE}
+
+crime150 <- read_xlsx("C:/Users/LW/Box/Mexico City Police 2020/data/buffer_150_crime3.xlsx")
+
+#https://www.jessesadler.com/post/network-analysis-with-r/
+
+# Here we create nodes and edge lists to build our network
+require(tidyverse)
+
+#create node list from the data
+sources <- crime150 %>%
+  distinct(delito) %>%
+  rename(label = delito)
+
+
+destinations <- crime150 %>%
+  distinct(escuela_nivel) %>%
+  rename(label = escuela_nivel)
+
+#put all wanted nodes into one column with id
+nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id")
+
+
+#create edges and edge weight from the nodes
+per_route <- crime150 %>%
+  group_by(delito, escuela_nivel) %>%
+  summarise(weight = n()) %>%
+  ungroup()
+per_route
+
+# node_mtx <- as.matrix(per_route)
+
+#link ids
+edges <- per_route %>%
+  left_join(nodes, by = c("delito" = "label")) %>%
+  rename(from = id)
+edges <- edges %>%
+  left_join(nodes, by = c("escuela_nivel" = "label")) %>% 
+  rename(to = id)
+
+edges <- select(edges, from, to, weight)
+#create a network object
+crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+plot(crime_network, vertex.cex =3) #, mode = "circle")
+
+my.colors <- c(rep("red"), rep("blue"))
+gplot(crime_network, gmode="twomode", 
+      # label=c(rownames(crime_network),colnames(crime_network)),
+      vertex.cex=2,
+      usearrows=TRUE,
+      label.col = my.colors,
+      main = "Crime to School Network: Crime = Red, School = Blue",
+)
+
+
+
+```
+
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+install_github("DougLuke/UserNetR")
+
+
+net1 <- network::network(crime_network, matrix.type = "adjacency")
+# summary(net1)
+# gplot(net1, vertex.col = 2, displaylabels = FALSE)
+net2 <- network(crime_network, matrix.type = 'edgelist')
+# gplot(net2, vertex.col = 2, displaylabels = FALSE)
+# summary(net2)
+# igraph
+# detach(package:network)
+# rm(crime_network)
+library(igraph)
+
+
+crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
+# crime_igraph
+
+# plot(crime_igraph, edge.arrow.size = .02)
+# plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE)
+
+library(tidygraph)
+library(ggraph)
+
+crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
+crimes_igraph_tidy <- as_tbl_graph(crime_igraph)
+
+# 
+# class(crimes_tidy)
+# class(crimes_igraph_tidy)
+# class(crime_igraph)
+
+arrangeweight <- crimes_tidy %>% activate(edges) %>% arrange(desc(weight))
+ggraph(crimes_tidy) + geom_edge_link() + geom_node_point() +theme_graph()
+
+ggraph(crimes_tidy, layout = "graphopt") +
+  geom_node_point() +
+  geom_edge_link(aes(width = weight), alpha = .8) +
+  scale_edge_width(range = c(.2, 2)) +
+  # geom_node_circle(aes(color("green"))) +
+  geom_node_text(aes(label = label), repel = TRUE) +
+  labs(edge_width = "crime") + theme_graph()
+
+ggraph(crimes_tidy, layout = "linear") + 
+  geom_edge_arc(aes(width = weight), alpha = 0.8) + 
+  scale_edge_width(range = c(0.2, 2)) +
+  geom_node_text(aes(label = label)) +
+  labs(edge_width = "crime") +
+  theme_graph()
+
+#3d?
+# install.packages("networkD3")
+library(visNetwork)
+library(networkD3)
+
+nodes_d3 <- mutate(nodes, id = id - 1)
+edges_d3 <- mutate(edges, from = from - 1, to = to - 1)
+sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to", 
+              NodeID = "label", Value = "weight", fontSize = 16, unit = "crime(s)")
+
+
+
+```
+
+## Latent Space Clustering
+```{r echo=FALSE message=FALSE, warning=FALSE}
+library(latentnet)
+# 
+# help("sampson")
+# help("samplike")
+# data(sampson)
+# 
+# class(samplike)
+
+# See the summary of the network object called "samplike":
+
+# samplike
+
+# Notice (from the above printout) that the vertex 
+#  attributes include "group" and "vertex.names"
+
+# To find the labels of each vertex:
+# get.vertex.attribute(crime_network, "vertex.names")
+
+# Example 1
+# First estimate dimensional scores for a latent position model with 2 dimensions.  
+# Use defaults for algorithmic inputs.
+# crime.fit <- ergmm(crime_network ~ euclidean(d=2))
+# # The argument "tofit" is optional, telling ergmm that only the MLE is
+# #   wanted, thus skipping the MCMC sampling run. See the line following this one:
+# # samplike.fit <- ergmm(samplike ~ euclidean(d = 2), tofit = c("mle"))
+
+
+
+# Example 2
+# Fit a latent position model with 2 dimensions and 3 groups to "samplike", 
+#   using defaults for all other algorithmic inputs.
+# For this example (to insure reproducibility with manual), set random
+#   number seed:
+set.seed(3141)
+# The term "euclidean" adds a Euclidean latent space distance term,
+#   minus(abs(Zi - Zj)), to the linear predictor of the probability of
+#   a tie between i and j. optionally modeling clustering of the latent
+#   space positions.
+# Below, the G parameter fits 3 groups. The optional argument "verbose" is 
+#   used to make ergmm print out diagnostics of its progress:
+crime.fit <- ergmm(crime_network ~ euclidean(d = 2, G = 3), verbose = TRUE)
+
+summary(crime.fit)
+
+
+#review the latent network output
+
+crime.fit$mcmc.mle
+
+#To see position scores for each of the 163 crimes monks:
+crime.fit$mcmc.mle$Z
+
+# To see the clusters found: 3 clusters!
+crime.fit$mcmc.pmode$Z.K
+
+# To see the posterior probabilities of group membership for each crime:
+attr(crime.fit$sample, "Q")
+
+# Plotting the fit (By default, a call to "plot" will plot the minimum Kullback-Leibler [MKL] estimates; see Shortreed et al., 2006; cited in Refworks): (Note: I believe these estimates are in: samplike$mkl along with cluster memberships, etc.)
+
+plot(crime.fit)
+
+# A convenient way of visualizing clustering: Plot each node as a small pie chart with the slices of the pie being the proportions of MCMC draws in which that node belonged to each cluster. This is done by "pie=TRUE"):
+plot(crime.fit, pie=TRUE, vertex.cex = 2.5)
+
+# To also plot cluster means:
+plot(crime.fit, what = "pmean")
+
+# To also plot approximate posterior modes (if these were requested in the "tofit" argument of ergmm):
+# plot(crime.fit, what="pmode")
+
+# To plot the positions from the 4th MCMC draw:
+plot(crime.fit, what=4)
+
+# To produce an "animation" of the sampler's evolution:
+for (i in 1:crime.fit$control$sample.size) {
+	plot(crime.fit, what = i)
+	Sys.sleep(0.1)
+	}
+
+# To assess goodness of fit (page 20):
+crime.fit <- gof(crime.fit)
+summary(crime.fit)
+
+plot(crime.fit)
+```
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+
+# Pavel N. Krivitsky and Mark S. Handcock, "Fitting Position Latent
+#  Class Models for SOcial Networks with [package] latentnet"
+#  Journal of Statistical Software 24(5), 2008.
+# If it is not currently installed, install the package "latentnet"
+#  by clicking on Tools / Install Packages ......
+# Section 2.1
+
+
+network.vertex.names(crime_network)
+# crime_network %v% "group"
+
+# Now, -- What is the LATENT SPACE model??
+#  -- It assumes that the conditional probability of a tie between
+#     two actors, given the covariates, depends only on the distance
+#     between them in a "social space" that is unobserved.
+#  -- It also assumes that, **GIVEN** the distance betwen them, as
+#     well as the covariates, OTHER THAN THAT the ties between 
+#     actors occur independently (page 2).
+# Let's fit a simple "latent position" model, using maximum likeli-
+#    hood estimation. Let's impose that there are 2 dimensions.
+#
+# We use the program ergmm (note the extra "m") in package latentnet.
+# NOTE: The code below differs from that at the bottom of
+#   Krivitsky-Handcock page 5:
+# crime.fit2 <- ergmm(crime_network ~ euclidean(d=2, G=0), tofit=c("mle"))
+
+# See the names of the things produced:
+names(crime.fit2)
+# See the names of the things in "mle":
+names(crime.fit2$mle)
+# Pull out the estimated (MLE) coordinates of each person
+#  on each dimension:
+Z <- crime.fit2$mle$Z
+# Take a look at Z:
+Z
+# These are not identical to, but highly correlated with,
+#  the dimensional scores on pages 5-6: the first column
+#  of Z correlates -.975 with the first column on pages 5-6;
+#  the second column correlates -.928. (The "minus" sign
+#  just indicates, so to speak, reading from left-to-right
+#  versus right-to-left).
+#
+# Let's plot the persons in the 2-dimensional space, indicating
+#  their "group" (as determined by Dr. Sampson's observational
+#  study.) First create the plot symbols for the groups:
+# oneL <- crime_network %v% "group"
+# oneL[oneL == "Turks"] <- "T"
+# oneL[oneL == "Outcasts"] <- "O"
+# oneL[oneL == "Loyal"] <- "L"
+# oneL[c(1, 7, 15)] <- "W" # This is because Sampson labeled
+#                          # monks 1, 7, 15 as "Waverers" between
+#                          # the social groups he identified
+#                          # (specifically, between the Outcasts
+#                          # and the Loyal Opposition).
+# oneL
+# # Now create some colors:
+# oneLcolors <- rep("red", 18)
+# oneLcolors[which(oneL == "O")] <- "blue"
+# oneLcolors[which(oneL == "L")] <- "black"
+# oneLcolors[which(oneL == "W")] <- "green"
+# oneLcolors
+#
+
+# Now let's plot the position locations (determined by MLE)
+#  and the groups:
+# plot(crime.fit2, label = oneL, vertex.col = oneLcolors,
+#      what="mle", main="MLE positions", print.formula=TRUE,
+#      labels = TRUE)
+# title(sub = "Color represents the estimated groups: Labels the groups found by Sampson")
+```
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+
+# Compare the resulting plot to the one in Fig. 1 on page 7.
+#
+# Next (Section 2.3, p. 8),
+# A latent position fit with clustering: 2 dims and 5 groups
+# Not necessary, but to insure we get the "same" random numbers
+#  as the authors:
+set.seed(3141)
+# The G parameter fits 3 groups. "verbose" leads to
+#  more printout.
+crime.fit5 <- ergmm(crime_network ~ euclidean(d = 2, G = 5),
+                      verbose = TRUE)
+# See the summary (which is not identical to, but very
+#  close to, the printout shown on page 9. Differences
+#  could be due to slight changes in the writing of the
+#  algorithm)
+summary(crime.fit5) # Compare page 9
+
+# Let's plot our new model (mkl are the Minimum Kullblack-Leibler
+#  divergence values, as coordinates: you can see them by typing:
+crime.fit5$mkl$Z
+
+plot(crime.fit5, label = oneL, vertex.col = oneLcolors, what="mkl", main="mkl positions", print.formula=TRUE,
+     labels = TRUE)
+title(sub = "Color represents the estimated groups: Labels the groups found by Sampson")
+
+# The model gives the probability that each node belongs
+#   to each group (although it's hard to remember this command!):
+crime.fit5$mkl$mbc$Z.pZK
+# (Notice the definitive assignments to clusters in this data example.)
+
+# Much simpler, and nice: Let's use the information above (prob. that each node is in each
+#  class) to represent each node as a pie chart of the probabilities:
+
+plot(crime.fit5, pie=TRUE, vertex.cex=2.5)
+# or, to identify the nodes:
+plot(crime.fit5, pie=TRUE, vertex.cex=2.5, labels=TRUE)
+
+# To see the plot based on the 1000th MCMC draw (page 15):
+plot(crime.fit5, what = 1000)
+
+# To see an animation of the sampler's evolution:
+for (i in 1:crime.fit5$control$sample.size) {
+  plot(crime.fit5, what = i)
+  Sys.sleep(0.1)
+}
+
+# To assess goodness of fit (page 20):
+crime.fit5.gof <- gof(crime.fit5)
+summary(crime.fit5.gof)
+
+plot(crime.fit5.gof)
+```
+
+
+## ERGM
+```{r echo=FALSE message=FALSE, warning=FALSE}
+
+class(crime_network)
+class(crimes_tidy)
+
+
+# Make the 'statnet' suite of programs (etc) available. 
+#  If you haven't done so, install 'statnet' by clicking
+#  on Tools \ Install Packages... and then by typing 'statnet'
+#  (without the quotes) and clicking on 'Install dependencies'
+# Then
+# require(statnet)
+# summary(crimes_tidy, print.adj = FALSE)
+# components(crimes_tidy)
+# gden(crimes_tidy)
+# centralization(crimes_tidy, betweenness, mode='graph')
+# 
+# deg <- degree(crimes_tidy, gmode = 'graph')
+# lvl <- crime_network %v% 'agency_lvl'
+# plot(TCdiss, usearrows=FALSE, displaylabels=TRUE, vertex.cex=log(deg),
+#      vertex.col=lvl+1, label.pos=3, label.cex=.7, edge.lwd=0.5,
+#      edge.col='grey75')
+# legend('bottomleft', legend=c('Local', 'State', 'National'),
+#         col=2:4, pch=19, pt.cex=1.5)
+# 
+
+# Section 11.2.1: Building a Null Model (p. 167)
+require(ergm)
+DSmod0 <- ergm(crime_network ~ edges,
+               control=control.ergm(seed=40))
+class(DSmod0)
+summary(DSmod0)
+
+
+summary(crime_network)
+
+DSmod1 <- ergm(crime_network ~ edges +
+                 nodefactor('lead_agency') +
+                 nodecov('tob_yrs') ,
+                 control=control.ergm(seed=40))
+
+# Note (R.B.):
+d <- gden(crime_network)
+d
+log(d/(1-d)) # This (logit of density) is the same as the model coefficient,
+#              for the ERGM model that includes ONLY an intercept.
+coef(DSmod0)[1]
+exp(coef(DSmod0))[1] / (1 + exp(coef(DSmod0))[1])
+plogis(coef(DSmod0)[1]) # This is the inverse logit of the coefficient,
+#                         which gives us back the network's density.
+
+?scatter.smooth
+
+# Then, after reading the resulting 'Help' page, type:
+scatter.smooth(crime_tidy %v% 'weight',
+               degree(crimes_tidy, gmode='graph'),
+               xlab='Weight',
+               ylab='Degree')
+
+
+```
