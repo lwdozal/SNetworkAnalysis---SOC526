@@ -42,7 +42,7 @@ library("devtools")
 
 ```
 
-## Setup
+## Setup network
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 
 crime150 <- read_xlsx("C:/Users/LW/Box/Mexico City Police 2020/data/buffer_150_crime3.xlsx")

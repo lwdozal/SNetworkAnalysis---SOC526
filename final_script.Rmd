@@ -13,6 +13,12 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list = ls())
 
 ```
+Crime in schools
+Crime in Mexico schools
+SNA and Crime - previous methods and descriptions
+My methods
+Results
+conclusion
 
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 library("statnet")
@@ -89,6 +95,9 @@ dim(mtx_fin)
 ```
 
 ## create network, nodes and edges
+
+Creating a network for analysis actualizes connections between nodes and edges. These entities are used to create network objects that represent adjacency matrices, or sociomatricies, which are square matricies with nodes as the network's rows and columns and the binary connections (0, 1) as their edges. At its simplist connection, for example, a link between two nodes is represented by a 1, 0 otherwise. Sometimes networks can be directed where a node sends information to a recieving node, but the information is not reciprocated. In our case, our data is undirected and represents two grops, crimes and schools. To build this network both crime and school columns are joined together to create one long list of nodes. A weights column is also created in a separate grouping of the crime and school columns to show their connecting measures and are labeled "to" and "from". The network is then created by implementing the nodes as rows and columns, and the edge list as the matrix meat. 
+
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 require(tidyverse)
 
@@ -168,6 +177,8 @@ crimes_igraph_tidy <- as_tbl_graph(crime_igraph)
 ```
 
 ## Centrality Measures
+
+
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 
 require(sna)
@@ -207,113 +218,6 @@ title(main = "Betweenness Centrality:crime Network")
 
 ```
 
-##Structural Blockmodel
-```{r echo=FALSE message=FALSE, warning=FALSE}
-load("concorSoc526.RData")
-require(concorR)
-
-dim(bin_crime)
-# dim(t(bin_crime))
-# S <- t(bin_crime) %*% bin_crime
-# C <- bin_crime  %*% t(bin_crime)
-# # dim(S)
-# # dim(C)
-# stackC <- rbind(C, S)
-# stackS <- rbind(S, C)
-# dim(stackC)
-# dim(stackS)
-
-
-result <- concorFirst(bin_crime)
-names(result)
-r1 <- result$r1
-# Let's take a look at only the first 5 rows and coluns, rounded to 3 places:
-round(r1[1:5,1:5], digits = 3)
-
-
-runA <- concor(r1, colnumbers = 1:37)
-names(runA)
-b1 <- runA$b1
-b2 <- runA$b2
-# For this first split (into 2 blocks), let's look at the list of managers in each block.
-# Block 1:
-b1
-b2
-
-
-
-# Now let's split each of these two blocks into two sub-blocks.
-#  (Handout, top of page 5).
-runB1 <- concor(r1, b1)
-block1_1 <- runB1$b1
-block1_2 <- runB1$b2
-runB2 <- concor(r1, b2)
-block2_1 <- runB2$b1
-block2_2 <- runB2$b2
-
-# Let's look at the block membership--
-block1_1
-block1_2
-block2_1
-block2_2
-
-perm4 <- c(block1_1, block1_2, block2_1, block2_2)
-size_of_split <- c(length(block1_1),length(block1_2),length(block2_1),length(block2_2))
-size_of_split
-perm4
-ddis <- density(bin_crime, perm4, size_of_split)
-ddis
-bin <- (ddis$dens > ddis$overall) +0
-bin
-
-# dis_groups <- c(nivel, delito_espesifico)
-# dis_groups
-# size_group_split <- c(length(nivel),length(delito_espesifico))
-# size_group_split
-# 
-# dis_den_mat <- density(bin_crime, dis_groups, size_group_split)
-# 
-
-
-print("CONCOR BLOCKS")
-ddis$dens
-ddis$overall
-(ddis$dens > ddis$overall) +0
-
-
-# print("PREDETERMINED 'DISLIKE' GROUPS")
-# dis_den_mat$dens
-# dis_den_mat$overall
-# (dis_den_mat$dens > dis_den_mat$overall) +0
-
-
-###  plot it
-
-# Let's create a membership vector:
-memb <- rep(0, 37)
-memb[block1_1] <- 1
-memb[block1_2] <- 2
-memb[block2_1] <- 3
-memb[block2_2] <- 4
-# Take a look:
-memb
-
-my.blockmodel.dis <- blockmodel(bin_crime, ec = memb, block.content = "density")
-
-# Take a look at the densities within each submatrix:
-# my.blockmodel.dis
-my.blockmodel.dis$block.model # This object consists only of the density matrix.
-# group.blockmodel.dis$block.model # This object consists only of the density matrix.
-
-# To represent these visually, we could use the "corrplot" library. (You may need to
-corrplot(my.blockmodel.dis$block.model, is.corr=FALSE, method="square") + title(sub = "Concor: Crime Densities")
-# corrplot(group.blockmodel.dis$block.model, is.corr=FALSE, method="square") + title(sub = "Predetermined Groups: Dislike Densities")
-# Plot the blockmodel:
-# plot(my.blockmodel.dis)+ title(sub =  "Concor: Crime Densities")
-# plot(group.blockmodel.dis) + title(sub = "Predetermined Groups: Dislike Densities")
-
-############################################################################################
-```
 
 ## Hierarchical Clustering 
 ```{r}
