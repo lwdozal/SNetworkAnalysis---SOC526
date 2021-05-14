@@ -94,6 +94,64 @@ crime_net <- network(bin_crime)
 
 ```
 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+require(tidyverse)
+# 
+# # To build this network both crime and school columns are joined together to create one long list of nodes. A weights column is also created in a separate grouping of the crime and school columns to show their connecting measures and are labeled "to" and "from". The network is then created by implementing the nodes as rows and columns, and the edge list as the matrix meat. 
+
+
+#create node list from the data
+sources <- crime150 %>%
+  distinct(delito) %>%
+  rename(label = delito)
+
+
+destinations <- crime150 %>%
+  distinct(escuela_nivel) %>%
+  rename(label = escuela_nivel)
+
+#put all wanted nodes into one column with id
+nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id")
+
+
+#create edges and edge weight from the nodes
+per_route <- crime150 %>%
+  group_by(delito, escuela_nivel) %>%
+  summarise(weight = n()) %>%
+  ungroup()
+# per_route
+
+# node_mtx <- as.matrix(per_route)
+
+#link ids
+edges <- per_route %>%
+  left_join(nodes, by = c("delito" = "label")) %>%
+  rename(from = id)
+edges <- edges %>%
+  left_join(nodes, by = c("escuela_nivel" = "label")) %>%
+  rename(to = id)
+
+edges <- select(edges, from, to, weight)
+#create a network object
+crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+# plot(crime_network, vertex.cex =3) #, mode = "circle")
+
+my.colors <- c(rep("red"), rep("blue"))
+gplot(crime_network, gmode="twomode",
+      label=c(rownames(delito_espesifico),colnames(nivel)),
+      vertex.cex=2,
+      usearrows=TRUE,
+      label.col = my.colors,
+      main = "Crime to School Network Edgelist: Red = 'from', Blue = 'to'",
+)
+
+install_github("DougLuke/UserNetR")
+
+
+net1 <- network::network(crime_network, matrix.type = "adjacency")
+summary(net1)
+gplot(net1, vertex.col = my.colors, main = "Edgelist: Red = 'from', Blue = 'to'") #, displaylabels = TRUE, label.col = my.colors)
+```
 
 ## Latent Space Clustering
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -137,7 +195,7 @@ set.seed(3141)
 #   space positions.
 # Below, the G parameter fits 3 groups. The optional argument "verbose" is 
 #   used to make ergmm print out diagnostics of its progress:
-crime.fit <- ergmm(crime_net ~ euclidean(d = 2, G = 3), verbose = TRUE)
+crime.fit <- ergmm(crime_network ~ euclidean(d = 2, G = 3), verbose = TRUE) #crime_net
 
 summary(crime.fit)
 
@@ -194,7 +252,7 @@ plot(crime.fit)
 # Section 2.1
 
 
-network.vertex.names(crime_net)
+network.vertex.names(crime_network) #crime_net
 # crime_network %v% "group"
 
 # Now, -- What is the LATENT SPACE model??
@@ -210,7 +268,7 @@ network.vertex.names(crime_net)
 # We use the program ergmm (note the extra "m") in package latentnet.
 # NOTE: The code below differs from that at the bottom of
 #   Krivitsky-Handcock page 5:
-crime.fit2 <- ergmm(crime_net ~ euclidean(d=2, G=0), tofit=c("mle"))
+crime.fit2 <- ergmm(crime_network ~ euclidean(d=2, G=0), tofit=c("mle")) #crime_net
 
 # See the names of the things produced:
 names(crime.fit2)
@@ -268,7 +326,7 @@ Z
 set.seed(3141)
 # The G parameter fits 3 groups. "verbose" leads to
 #  more printout.
-crime.fit5 <- ergmm(crime_net ~ euclidean(d = 2, G = 5),
+crime.fit5 <- ergmm(crime_network ~ euclidean(d = 2, G = 5), #crime_net
                       verbose = TRUE)
 # See the summary (which is not identical to, but very
 #  close to, the printout shown on page 9. Differences
@@ -279,10 +337,10 @@ summary(crime.fit5) # Compare page 9
 # Let's plot our new model (mkl are the Minimum Kullblack-Leibler
 #  divergence values, as coordinates: you can see them by typing:
 crime.fit5$mkl$Z
-
-plot(crime.fit5, label = oneL, vertex.col = oneLcolors, what="mkl", main="mkl positions", print.formula=TRUE,
-     labels = TRUE)
-title(sub = "Color represents the estimated groups: Labels the groups found by Sampson")
+my.cols<- c("green", "pink", "blue", "orange")
+plot(crime.fit5, vertex.col = my.cols, what="mkl", main="mkl positions", print.formula=TRUE,
+     labels = TRUE) #vertex.col = oneLcolors,
+title(sub = "Color represents the estimated groups: Labels the groups found")
 
 # The model gives the probability that each node belongs
 #   to each group (although it's hard to remember this command!):
