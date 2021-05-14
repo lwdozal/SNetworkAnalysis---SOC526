@@ -115,11 +115,6 @@ gplot(crime_net, gmode="twomode",
 Looking at the centrality measures of a network helps to identify various ways in which a node is connected to other nodes. There are 3 basic types of centrality measures including degree centrality, closeness centrality, and betweenness centrality. Degree centrality measures the number of connections a node is to other nodes within the network (Wasserman, Faust, 1994). Closeness centrality meausures how close a node is to all the other nodes in the network based on their distance apart, or how long it takes to get from one node to another. Betweenness centrality measures how many nodes a particular node sits between, for example, how central is this node for facilitating information flow within a network, are they an essential stop or can they be skipped?
 
 The degree centrality for the top three school nodes is, PRIMARIA GENERAL (d = 198) translates to "public elementary school", PREESCOLAR GENERAL(d = 160) translantes to "public preschool", and SECUNDARIA GENERAL (d = 116) translates to "public middle school". The degree centrality for the top crime nodes is VIOLENCIA FAMILIAR (d = 30) translates to "domestic violence", ROBO A TRANSEUNTE EN VIA PUBLICA CON VIOLENCIA (d = 28) translates to "mugging", ROBO A NEGOCIO SIN VIOLENCIA (d = 24) translates to "non-violent business robbery", and AMENAZAS (d = 24) translates to "threats." With this information we can assume that public schools have a higher number of crimes in their neighborhood, and the top crimes in a school's a 150m radius are domestic "violence", "mugging", "non-violent business robbery", and "threats." Overall, the top ten nodes with the highest degree measures were schools, which is inline with the type of data we are using as schools in the center of their own 150m radius. 
-
-The closeness centrality measures for the top three school nodes are "public elementary school", (c = 0.64), "public preschool" (c = 0.55), and "public middle school"(c = 0.47). The top crime centrality measure are "domestic violence" (c = 0.50), "mugging" (c = 0.49), "business robbery" (c = .048), and "threats" (c = 0.48). The top school and crime centralities are the same, but their order of greater closeness starts with "public elementary school", "public preschool", "domestic violence", and then "mugging". We can assume that these top nodes happen in close proximity to each other.
-
-The top betweenness centrality measures for school nodes are also "public elementary school" (b = 11055.1143),"public preschool" (b = 6530.8892), and "public middle school" (b = 3473.3928). The top betweenness scores for crime slightly changed and their measures are, "domestic violence" (b = 1406.7534), "mugging" (b = 977.0407), and ROBO DE VEHICULO DE SERVICIO PARTICULAR SIN VIOLENCIA (b = 889.8290) translates to "non-violent theft of a private vehicle". The top 5 betweeness nodes overall are schools, meaning that schools are a central componenet for crimes in the neighborhood. This is expected because of the nature of the data and how the radius around the schools was set-up to collect the crime data.
-
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 require(sna)
@@ -139,6 +134,14 @@ kable(sort.d[149:163])
 gplot(crime_net, vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * d.cent) + #label=names(d.cent), #label=names(d.cent),
 title(main = "Degree Centrality:Crime Network")
 
+```
+
+The closeness centrality measures for the top three school nodes are "public elementary school", (c = 0.64), "public preschool" (c = 0.55), and "public middle school"(c = 0.47). The top crime centrality measure are "domestic violence" (c = 0.50), "mugging" (c = 0.49), "business robbery" (c = .048), and "threats" (c = 0.48). The top school and crime centralities are the same, but their order of greater closeness starts with "public elementary school", "public preschool", "domestic violence", and then "mugging". We can assume that these top nodes happen in close proximity to each other.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+require(sna)
+
 
 
 print("Closeness Centrality: Crimes")
@@ -153,6 +156,16 @@ top.c <- names(sort(c.cent))#[155:163]
 # Draw the graph with node sizes proportional to closeness centralitiy scores:
 gplot(crime_net,  vertex.col = my.colors, usearrows=TRUE, vertex.cex = 5 * c.cent) + # label=names(c.cent),
 title(main = "Closeness Centrality:Crime Network")
+
+```
+
+The top betweenness centrality measures for school nodes are also "public elementary school" (b = 11055.1143),"public preschool" (b = 6530.8892), and "public middle school" (b = 3473.3928). The top betweenness scores for crime slightly changed and their measures are, "domestic violence" (b = 1406.7534), "mugging" (b = 977.0407), and ROBO DE VEHICULO DE SERVICIO PARTICULAR SIN VIOLENCIA (b = 889.8290) translates to "non-violent theft of a private vehicle". The top 5 betweeness nodes overall are schools, meaning that schools are a central componenet for crimes in the neighborhood. This is expected because of the nature of the data and how the radius around the schools was set-up to collect the crime data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+require(sna)
+
+# summary(crime_net)
 
 print("Betweeness Centrality: Crimes")
 b.cent <- betweenness(crime_net, gmode = "digraph")
@@ -175,6 +188,8 @@ The network is composed of two sets, crime and schools, where crime can belong t
 As crimes connected within a school radius we can look further into the notion of duality by using a bipartite netowrk to consider the intersection of these two sets. In thier work on temporal dynamics of bipartite networks, Broccatelli et al use bipartite networks with a temporal aspect to modes covert networks to intersect actors and events across time (Broccatelli, et al., 2016). They implement three steps, an affiliation matrix of the two sets, they generate a line graph projection where edges between individuals are transformed to nodes while excluding redundant ties, and last they further reduce the ties to contain only the edges that connect the individual nodes to the group nodes (Broccatelli, et al., 2016). 
 
 School to school ties within crime sets show how some schools are more prone to specific crimes. These are reciprocal ties that connect the two node types that interact with each other. In Figure# there are seven main school to school clusters with the crime set while eight other sets are connected outside of the typical crime space. In Figure# crime to crime ties within schools show a different behavior than their school-to-school counterpart where most crimes do not affiliate with each other showing distant parts, and little if any connections to other dissimilar crimes. This is an interesting outcome because it shows how crime around schools is somewhat independent of itself, instead of being connected to other crimes. The comparison of school to schools within crimes is also interesting because it shows how schools are connected based on the crimes being made within their radius. 
+
+One limitation to reviewing the crime to school data with bi-dynamic networks is its implication of time, specifically how an individual cannot perform an more than one action simultaneously and so drops factors of redundancy (Broccatelli, et al., 2016). In the case of the crime and school data, two crimes can and potentially do happen simultaneously, but the bipartite analysis works with the data because the redundancy lies in the frequency of a crime happening and redundancy can be dropped if every unique crime and every unique school is included.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -279,7 +294,7 @@ require(sna)
 # # Plot matrix bin_crime:
 my.colors <- c(rep("red",nrow(bin_crime)), rep("blue", ncol(bin_crime)))
 gplot(bin_crime, gmode="twomode",
-      label=c(rownames(bin_crime),colnames(bin_crime)),
+      # label=c(rownames(bin_crime),colnames(bin_crime)),
       vertex.cex=1.5,
       usearrows=TRUE,
       # label.col = my.colors
@@ -291,7 +306,7 @@ gplot(bin_crime, gmode="twomode",
 #create crime to school connections
 c <- bin_crime %*% t(bin_crime)
 gplot(c, edge.lwd = 4*c,
-      label=rownames(c), #[15:25],
+      # label=rownames(c), #[15:25],
       usearrows=FALSE,
       main = "Crime to School Connections")
 
@@ -299,12 +314,13 @@ gplot(c, edge.lwd = 4*c,
 S <- t(bin_crime) %*% bin_crime
 gplot(S, edge.lwd = 4*S,
       vertex.col="blue",
-      label=rownames(S), #[15:25],
+      # label=rownames(S), #[15:25],
       usearrows=FALSE,
       main = "School to Crime Connections")
 
 
 ```
+
 
 ### Bi-dynamic line graph of school-to-school ties WITHIN crimes
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -317,3 +333,400 @@ kable(ssc[1:10,1:10])
 
 kable(cct[1:10,1:10])
 ```
+
+==========================
+Summary of model fit
+==========================
+
+Formula:   crime_net ~ euclidean(d = 2, G = 3)
+Attribute: edges
+Model:     Bernoulli 
+MCMC sample of size 4000, draws are 10 iterations apart, after burnin of 10000 iterations.
+Covariate coefficients posterior means:
+            Estimate   2.5%  97.5% 2*min(Pr(>0),Pr(<0))    
+(Intercept)   5.6341 4.3620 7.2468            < 2.2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Overall BIC:        2287.504 
+Likelihood BIC:     1190.657 
+Latent space/clustering BIC:     1096.847 
+
+Covariate coefficients MKL:
+
+Estimate -> (Intercept)	3.93983	
+
+$lpY
+[1] -591.4524
+
+$lpZ
+[1] -667.1785
+
+$lpbeta
+[1] -4.671769
+
+$lpLV
+[1] -29.51869
+
+$beta
+[1] 6.912014
+
+$beta.rate
+[1] 0
+
+$Z.K
+  [1] 2 2 3 2 3 2 2 3 3 3 3 3 2 2 3 3 3 2 3 3 2 3 3 3 2 3 3 2 3 2 2 2 3 3 3 3 2 2 2 3 3 3 2 3 2 3 2 3 2 3 2 2 3 3 2
+ [56] 3 3 2 3 2 3 3 3 3 3 3 2 3 3 3 2 3 2 2 3 3 2 2 3 3 3 3 2 3 2 2 3 3 2 2 3 2 2 3 3 2 3 3 3 3 3 2 3 3 3 2 3 3 3 3
+[111] 3 2 2 3 3 2 2 3 3 2 2 3 3 3 2 2 1 1 1 1 1 1 2 1 1 1 1 1 1 1 2 2 1 1 1 2 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1
+
+$Z.mean
+          [,1]      [,2]
+[1,]  0.921497  1.356312
+[2,] 11.069771 -3.333655
+[3,] 13.296264  2.859654
+
+$Z.var
+[1] 3.169677 7.009580 2.496716
+
+$Z.pK
+[1] 0.2272232 0.3775993 0.3951774
+
+$Z
+              [,1]       [,2]
+  [1,] 12.90852287 -0.8044730
+  [2,] 13.12163280 -2.4354910
+  [3,] 10.48638452  2.1777024
+  [4,] 11.42862277 -1.4560414
+  [5,] 13.57405402  2.3919366
+  [6,] 11.25776232 -4.6493095
+  [7,]  8.21927669 -3.0440654
+  [8,] 12.98370628  1.6591054
+  [9,] 13.10846864  3.9526741
+ [10,] 16.36972093  4.3462517
+ [11,] 13.24519094  2.2545477
+ [12,] 11.76484489  3.4376060
+ [13,] 11.39970175  0.2682469
+ [14,]  9.01287626 -7.1241170
+ [15,] 11.77806205  3.5293201
+ [16,] 11.37108285  1.1463497
+ [17,] 13.62375235  4.8656546
+ [18,] 13.21899930 -1.9319097
+ [19,] 12.99797604  3.9495200
+ [20,] 13.89294306  6.9714575
+ [21,] 10.78628660 -8.0146615
+ [22,] 12.64647180  4.7529528
+ [23,] 12.40557839  3.7164282
+ [24,] 15.10099394  4.5469347
+ [25,] 10.63392008 -0.2446020
+ [26,] 14.62331334  1.5134399
+ [27,] 14.15777962  2.2060270
+ [28,] 15.07553569 -0.8987259
+ [29,] 15.56148902  2.1468566
+ [30,] 14.98766748  0.8972043
+ [31,] 12.20357065 -5.5781358
+ [32,] 12.92459709 -0.5055735
+ [33,] 10.68762709  0.2704038
+ [34,] 12.35204278  4.8466171
+ [35,] 15.08705269  2.5566335
+ [36,] 14.50587727  5.1230544
+ [37,] 11.89711080 -4.2604859
+ [38,] 11.20565379 -6.4003751
+ [39,] 12.40629306 -1.0351170
+ [40,] 17.22713965  2.5621461
+ [41,] 15.31397664  1.1866394
+ [42,] 13.85008994 -0.7222525
+ [43,] 15.03119547 -3.1854422
+ [44,] 12.20136470  2.6350344
+ [45,] 12.10454912 -0.9018516
+ [46,] 14.53167598  2.6056519
+ [47,] 10.30838996 -4.7479694
+ [48,] 12.74667852  2.4686607
+ [49,] 10.41255943 -1.6703542
+ [50,] 14.91965828  1.8963320
+ [51,] 13.74324356 -3.0058031
+ [52,]  7.99716781 -4.1544419
+ [53,] 12.84024670  3.5017769
+ [54,] 14.31909371  1.9184461
+ [55,] 12.28112671 -5.8076995
+ [56,] 12.70336014  3.5440953
+ [57,] 13.14950304  2.5387819
+ [58,] 11.96987759 -0.7718699
+ [59,] 14.48676821  3.1403099
+ [60,] 11.84561185 -7.6016168
+ [61,] 12.32164285  2.4494949
+ [62,] 13.36722666  3.7970341
+ [63,] 12.65360987  3.8673826
+ [64,] 15.05411106  2.0738665
+ [65,] 12.40473518  4.3765708
+ [66,] 15.31831316  1.6615647
+ [67,] 12.83511238  2.9704429
+ [68,] 12.14774985  8.0142370
+ [69,] 14.64362304  2.6707394
+ [70,] 12.50202214  1.8492048
+ [71,] 10.11501821 -1.6296383
+ [72,] 16.04610447  2.3726980
+ [73,] 10.34419257 -0.4107715
+ [74,]  8.59705763 -0.5759341
+ [75,] 12.23900573  3.9189546
+ [76,] 13.01658486  6.0578384
+ [77,] 13.65896485 -2.5802842
+ [78,]  8.69280126 -5.7504403
+ [79,] 11.12016202  2.4251702
+ [80,] 13.14086420  3.8138409
+ [81,] 11.93554344  0.5576579
+ [82,] 13.54395901  2.7232765
+ [83,] 12.97848788 -6.5996965
+ [84,] 15.03420658  3.9627565
+ [85,] 10.08009336  0.2747978
+ [86,]  9.19323221 -9.1945170
+ [87,] 13.63064367  2.5750963
+ [88,] 14.60999337  2.7084054
+ [89,]  7.65329980 -5.1661271
+ [90,] 13.66811874 -5.2206485
+ [91,] 13.58884271  4.6297809
+ [92,]  9.37369886 -2.4363744
+ [93,] 13.14159197 -4.6843578
+ [94,] 13.72071005  5.0377398
+ [95,] 13.92216467  4.9314984
+ [96,]  8.29894396 -2.7763323
+ [97,] 13.36570689  1.0953962
+ [98,] 12.73070577  2.8509004
+ [99,]  9.89715506  1.8951212
+[100,] 13.66399246  4.2068358
+[101,] 13.31252515  3.8980352
+[102,]  8.75344257 -6.9865362
+[103,] 12.26401057  4.6558288
+[104,] 12.01144998  1.6219603
+[105,] 14.11163600  1.1935011
+[106,]  9.62477565 -0.4373142
+[107,] 11.22103897  2.2524142
+[108,]  9.48122563  2.7020533
+[109,] 13.56741656  2.5387765
+[110,] 12.70970104  3.3841122
+[111,] 12.49464393  0.4141346
+[112,]  7.78651577 -3.9307770
+[113,] 10.32721611 -6.6814403
+[114,] 12.78190329  0.7919531
+[115,] 13.70299656 -1.6551481
+[116,] 12.96163291 -0.7295479
+[117,] 12.09937635 -1.9924835
+[118,] 11.71973678  5.9029311
+[119,] 14.83665648  4.6128990
+[120,] 14.42036476 -5.9275105
+[121,] 12.01838816 -7.4806041
+[122,] 10.79696015  1.2162542
+[123,] 12.48945214  2.8032580
+[124,] 13.97730950  2.0538457
+[125,] 16.09860929 -1.8372999
+[126,]  8.78853093  1.6482919
+[127,]  1.60521867  2.2847324
+[128,]  0.85812942  1.8269591
+[129,]  0.61306459  4.9745451
+[130,]  1.47587744  4.4301760
+[131,] -0.16708350  3.8238627
+[132,]  0.24878681 -1.2574808
+[133,]  5.43674759 -1.7365244
+[134,]  2.08821178  2.4498641
+[135,]  3.74042921  0.5346907
+[136,] -0.62356111  2.8672457
+[137,]  3.80093826  1.1656959
+[138,]  0.04686622  1.3452592
+[139,] -0.50941060  1.2436340
+[140,]  0.79042061  2.7238992
+[141,]  7.97202883  0.1297280
+[142,]  6.77012276 -4.0870560
+[143,] -0.23029017 -0.8282017
+[144,]  0.61840751  0.2153386
+[145,] -1.08780342 -2.2292924
+[146,] 12.41063135 -2.3758984
+[147,]  0.65161041  0.7470747
+[148,]  1.43411394 -0.3287531
+[149,] -1.62969634  1.3276054
+[150,] -0.02871650  0.2738856
+[151,] -1.21095621 -1.8948421
+[152,]  0.64146875 -0.2674642
+[153,] -0.87939807  0.3027044
+[154,]  0.86702864  0.6260840
+[155,]  0.09850599  1.8558534
+[156,]  1.56023192 -2.1662583
+[157,]  6.77009683  1.2720079
+[158,]  3.25790020  2.2015553
+[159,]  1.05340655  1.2781946
+[160,]  2.31257844  2.3299351
+[161,]  1.08683314  2.1578323
+[162,]  0.41116719  0.9114413
+[163,]  4.29006437 -0.5428804
+
+$Z.rate
+[1] 0
+
+ [1] 12.908523 13.121633 10.486385 11.428623 13.574054 11.257762  8.219277 12.983706 13.108469 16.369721 13.245191
+[12] 11.764845 11.399702  9.012876 11.778062
+  [1] 3 3 2 3 3 3 2 3 3 3 3 3 2 3 3 2 3 3 3 3 3 3 2 3 2 3 3 3 3 3 3 3 2 3 3 3 2 3 2 3 3 3 3 3 3 3 3 3 3 3 3 2 3 3 3
+ [56] 3 3 3 3 3 3 3 3 3 3 3 3 3 3 3 2 3 2 2 3 3 3 2 3 3 3 3 3 3 2 3 3 3 2 3 3 2 3 3 3 2 3 3 2 3 3 3 3 3 3 2 3 2 3 3
+[111] 3 2 2 3 3 3 3 3 3 3 3 2 3 3 3 2 1 1 1 1 1 1 2 1 2 1 2 1 1 1 2 2 1 1 1 2 1 1 1 1 1 1 1 1 1 1 2 1 1 1 1 1 2
+               [,1]         [,2]         [,3]
+  [1,] 5.163019e-06 0.1601868029 8.398080e-01
+  [2,] 4.985283e-06 0.0983296619 9.016654e-01
+  [3,] 4.196953e-03 0.5141932167 4.816098e-01
+  [4,] 6.726241e-05 0.6101868935 3.897458e-01
+  [5,] 4.321349e-05 0.1233157641 8.766410e-01
+  [6,] 1.267649e-05 0.2886223542 7.113650e-01
+  [7,] 2.790042e-03 0.9433485674 5.386139e-02
+  [8,] 8.323826e-06 0.0922721811 9.077195e-01
+  [9,] 1.395905e-04 0.1470888702 8.527715e-01
+ [10,] 3.596248e-06 0.0609121628 9.390842e-01
+ [11,] 1.920628e-05 0.0588110104 9.411698e-01
+ [12,] 2.852788e-05 0.2885212726 7.114502e-01
+ [13,] 6.611167e-05 0.5917714274 4.081625e-01
+ [14,] 5.632388e-06 0.1387196302 8.612747e-01
+ [15,] 7.154252e-05 0.1816546150 8.182738e-01
+ [16,] 2.796698e-05 0.3031330956 6.968389e-01
+ [17,] 2.051350e-06 0.1249525597 8.750454e-01
+ [18,] 2.230343e-05 0.1374940304 8.624837e-01
+ [19,] 3.073612e-06 0.0659625229 9.340344e-01
+ [20,] 2.874497e-06 0.0631538029 9.368433e-01
+ [21,] 4.686194e-06 0.1443325268 8.556628e-01
+ [22,] 1.634405e-05 0.1830951894 8.168885e-01
+ [23,] 1.455549e-05 0.3073264258 6.926590e-01
+ [24,] 2.432283e-05 0.1524947844 8.474809e-01
+ [25,] 3.190699e-04 0.8746994228 1.249815e-01
+ [26,] 5.653172e-06 0.0655783062 9.344160e-01
+ [27,] 3.005803e-06 0.0819803014 9.180167e-01
+ [28,] 1.590251e-06 0.0656427246 9.343557e-01
+ [29,] 1.566899e-06 0.0694000597 9.305984e-01
+ [30,] 5.187906e-06 0.0892064119 9.107884e-01
+ [31,] 7.654371e-06 0.1106977339 8.892946e-01
+ [32,] 2.376505e-05 0.3478581393 6.521181e-01
+ [33,] 6.299960e-04 0.8065951731 1.927748e-01
+ [34,] 4.412597e-05 0.1221018832 8.778540e-01
+ [35,] 1.855205e-06 0.0654204023 9.345777e-01
+ [36,] 3.633630e-06 0.0805184387 9.194779e-01
+ [37,] 1.496320e-05 0.2908965950 7.090884e-01
+ [38,] 8.013199e-06 0.2182624132 7.817296e-01
+ [39,] 2.923082e-05 0.3606672421 6.393035e-01
+ [40,] 3.123741e-06 0.0605283679 9.394685e-01
+ [41,] 1.056133e-06 0.0625116568 9.374873e-01
+ [42,] 3.525636e-06 0.1237806199 8.762159e-01
+ [43,] 2.076402e-06 0.0686070486 9.313909e-01
+ [44,] 1.973718e-05 0.1073800247 8.926002e-01
+ [45,] 2.736483e-04 0.3059200759 6.938063e-01
+ [46,] 4.478977e-06 0.0712309496 9.287646e-01
+ [47,] 1.074369e-05 0.1692035386 8.307857e-01
+ [48,] 7.127081e-05 0.1098295226 8.900992e-01
+ [49,] 2.836577e-04 0.5865088460 4.132075e-01
+ [50,] 3.555229e-04 0.0637047389 9.359397e-01
+ [51,] 2.308134e-05 0.1068306487 8.931463e-01
+ [52,] 1.292100e-03 0.8798747442 1.188332e-01
+ [53,] 6.325884e-05 0.2068711734 7.930656e-01
+ [54,] 2.840899e-06 0.0607536657 9.392435e-01
+ [55,] 2.985815e-06 0.1024883570 8.975087e-01
+ [56,] 9.895889e-06 0.1628281987 8.371619e-01
+ [57,] 7.434090e-06 0.1522727769 8.477198e-01
+ [58,] 2.031062e-05 0.3488319795 6.511477e-01
+ [59,] 4.359780e-05 0.0646069347 9.353495e-01
+ [60,] 7.537825e-06 0.1316579684 8.683345e-01
+ [61,] 2.139977e-06 0.0794882461 9.205096e-01
+ [62,] 6.805099e-06 0.0752913698 9.247018e-01
+ [63,] 2.593174e-06 0.0750543732 9.249430e-01
+ [64,] 3.433356e-06 0.0794875135 9.205091e-01
+ [65,] 6.539473e-05 0.1133587392 8.865759e-01
+ [66,] 1.650903e-06 0.0791149661 9.208834e-01
+ [67,] 2.263906e-05 0.1688149087 8.311625e-01
+ [68,] 2.913125e-04 0.0710736179 9.286351e-01
+ [69,] 1.231424e-05 0.0617905793 9.381971e-01
+ [70,] 5.833646e-06 0.1100025184 8.899916e-01
+ [71,] 5.074181e-04 0.9019959628 9.749662e-02
+ [72,] 3.606368e-05 0.0613354512 9.386285e-01
+ [73,] 5.758046e-04 0.9041296210 9.529457e-02
+ [74,] 2.989839e-03 0.9378050699 5.920509e-02
+ [75,] 5.933336e-06 0.0719362931 9.280578e-01
+ [76,] 2.476033e-06 0.0779272872 9.220702e-01
+ [77,] 1.146313e-05 0.1962438770 8.037447e-01
+ [78,] 3.741845e-04 0.7330230893 2.666027e-01
+ [79,] 3.154208e-04 0.4009935877 5.986910e-01
+ [80,] 3.466687e-06 0.0679419575 9.320546e-01
+ [81,] 3.233073e-05 0.2836767412 7.162909e-01
+ [82,] 5.701727e-06 0.0610835636 9.389107e-01
+ [83,] 1.827241e-06 0.0833177898 9.166804e-01
+ [84,] 1.100032e-06 0.0576221915 9.423767e-01
+ [85,] 3.014112e-04 0.8192203634 1.804782e-01
+ [86,] 4.307670e-05 0.1286794876 8.712774e-01
+ [87,] 2.479248e-06 0.0733151077 9.266824e-01
+ [88,] 1.929352e-06 0.0759665367 9.240315e-01
+ [89,] 1.080013e-03 0.4622718641 5.366481e-01
+ [90,] 3.118283e-06 0.1068095266 8.931874e-01
+ [91,] 3.131635e-05 0.0772123097 9.227564e-01
+ [92,] 1.668930e-03 0.9266677989 7.166327e-02
+ [93,] 3.451638e-06 0.1246410970 8.753555e-01
+ [94,] 3.117663e-06 0.0791321576 9.208647e-01
+ [95,] 1.881707e-06 0.0648931170 9.351050e-01
+ [96,] 8.658477e-03 0.9594093833 3.193214e-02
+ [97,] 1.993288e-05 0.1632873446 8.366927e-01
+ [98,] 1.684839e-05 0.1087517040 8.912314e-01
+ [99,] 2.432725e-03 0.8766857682 1.208815e-01
+[100,] 1.150737e-06 0.0744976265 9.255012e-01
+[101,] 9.704482e-06 0.1863497977 8.136405e-01
+[102,] 7.238774e-05 0.3139248384 6.860028e-01
+[103,] 1.922807e-05 0.1414034557 8.585773e-01
+[104,] 3.581046e-05 0.1051409818 8.948232e-01
+[105,] 2.779740e-06 0.0731495414 9.268477e-01
+[106,] 8.618988e-04 0.8907583345 1.083798e-01
+[107,] 1.169512e-04 0.2817617667 7.181213e-01
+[108,] 8.665974e-04 0.8545997241 1.445337e-01
+[109,] 2.820901e-06 0.0758002708 9.241969e-01
+[110,] 4.035087e-05 0.1042827412 8.956769e-01
+[111,] 2.697016e-05 0.3042050413 6.957680e-01
+[112,] 2.405923e-03 0.9048639437 9.273013e-02
+[113,] 8.215899e-05 0.6661725772 3.337453e-01
+[114,] 1.228277e-05 0.0791233572 9.208644e-01
+[115,] 1.092773e-05 0.0603816351 9.396074e-01
+[116,] 7.814352e-06 0.1896763093 8.103159e-01
+[117,] 9.831517e-06 0.2981131089 7.018771e-01
+[118,] 1.556245e-05 0.0622327403 9.377517e-01
+[119,] 9.242597e-06 0.0736164726 9.263743e-01
+[120,] 4.058997e-06 0.0990532362 9.009427e-01
+[121,] 1.685399e-06 0.0566969165 9.433014e-01
+[122,] 5.469283e-04 0.9006220069 9.883106e-02
+[123,] 8.897173e-06 0.0819611725 9.180299e-01
+[124,] 5.243231e-06 0.0912180895 9.087767e-01
+[125,] 4.283793e-06 0.1049331020 8.950626e-01
+[126,] 1.443303e-02 0.9542949663 3.127200e-02
+[127,] 9.950675e-01 0.0049251450 7.310929e-06
+[128,] 9.977387e-01 0.0022598283 1.458477e-06
+[129,] 9.981680e-01 0.0018315965 4.138105e-07
+[130,] 9.987502e-01 0.0012470420 2.708801e-06
+[131,] 9.986637e-01 0.0013355651 7.521012e-07
+[132,] 9.991205e-01 0.0008782270 1.263527e-06
+[133,] 2.234688e-02 0.9675831679 1.006995e-02
+[134,] 9.890508e-01 0.0109430471 6.137126e-06
+[135,] 1.403269e-01 0.8571782341 2.494882e-03
+[136,] 9.977996e-01 0.0021996367 7.843439e-07
+[137,] 4.938848e-01 0.5050813343 1.033822e-03
+[138,] 9.985952e-01 0.0014042685 5.272100e-07
+[139,] 9.986631e-01 0.0013350667 1.847538e-06
+[140,] 9.659900e-01 0.0340076781 2.274657e-06
+[141,] 1.018967e-03 0.9356090076 6.337203e-02
+[142,] 1.277086e-02 0.9719039397 1.532520e-02
+[143,] 9.942273e-01 0.0057722383 4.259593e-07
+[144,] 9.981176e-01 0.0018819303 4.371541e-07
+[145,] 9.964677e-01 0.0033451300 1.871220e-04
+[146,] 2.375743e-04 0.8047257547 1.950367e-01
+[147,] 9.937280e-01 0.0062669280 5.043880e-06
+[148,] 9.936841e-01 0.0063116296 4.299109e-06
+[149,] 9.988308e-01 0.0011685664 5.836793e-07
+[150,] 9.904537e-01 0.0095459681 3.251681e-07
+[151,] 9.986597e-01 0.0013398712 3.922810e-07
+[152,] 9.865583e-01 0.0134332040 8.466849e-06
+[153,] 9.980990e-01 0.0018996596 1.356836e-06
+[154,] 9.957252e-01 0.0042742785 4.924983e-07
+[155,] 9.784402e-01 0.0215575326 2.271642e-06
+[156,] 9.359979e-01 0.0637623813 2.396950e-04
+[157,] 1.905835e-02 0.9531512246 2.779043e-02
+[158,] 8.428485e-01 0.1559551408 1.196358e-03
+[159,] 9.843892e-01 0.0156064523 4.371691e-06
+[160,] 9.858935e-01 0.0140790861 2.742833e-05
+[161,] 9.990216e-01 0.0009538912 2.453169e-05
+[162,] 9.950256e-01 0.0049690068 5.386474e-06
+[163,] 3.854726e-01 0.6122993421 2.228027e-03
+

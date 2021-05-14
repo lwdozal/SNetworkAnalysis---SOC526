@@ -19,7 +19,7 @@ rm(list = ls())
 
 ```
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 library("statnet")
 library("dplyr")
 library("knitr")
@@ -43,132 +43,60 @@ library("devtools")
 ```
 
 ## Setup network
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 crime150 <- read_xlsx("C:/Users/LW/Box/Mexico City Police 2020/data/buffer_150_crime3.xlsx")
 
-#https://www.jessesadler.com/post/network-analysis-with-r/
+#crime columns
+delito_espesifico <- crime150$delito
+delito_vec <- as.array(crime150$categoria_)
+delito <- crime150$categoria_
+crime_spot <- crime150$calle_hech
+crime_neighbrhd <- crime150$colonia_he
+crime_region <- crime150$alcaldia_h
 
-# Here we create nodes and edge lists to build our network
-require(tidyverse)
+# length(unique(delito_espesifico))
 
-#create node list from the data
-sources <- crime150 %>%
-  distinct(delito) %>%
-  rename(label = delito)
+#school columns
+escuela_todo <- crime150$escuela_nombre
+nivel <- (crime150$escuela_nivel)
+nombre <- crime150$escuela
+school_address <- crime150$domicilio
 
+# length(unique(nivel))
+# table(delito_espesifico)
+# length(unique(delito_espesifico))
 
-destinations <- crime150 %>%
-  distinct(escuela_nivel) %>%
-  rename(label = escuela_nivel)
+# mtx1 <- matrix(crime150, nrow = length(unique(delito_espesifico)), ncol = length(unique(nivel)))
 
-#put all wanted nodes into one column with id
-nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id")
+mtx_crime150 <- data.matrix(crime150)
+# mtx_crime150
+# glimpse(crime150)
+# crime <- model.matrix(~ delito_espesifico + nivel -1)
 
+new_crime <- crime150[, c("categoria_","delito", "escuela_nivel", "calle_hech", "colonia_he", "alcaldia_h", "escuela", "domicilio")]
+crime_mtx <- data.matrix(new_crime)
+# crime_mtx
+# summary(crime_mtx, print.adj = FALSE)
 
-#create edges and edge weight from the nodes
-per_route <- crime150 %>%
-  group_by(delito, escuela_nivel) %>%
-  summarise(weight = n()) %>%
-  ungroup()
-per_route
-
-# node_mtx <- as.matrix(per_route)
-
-#link ids
-edges <- per_route %>%
-  left_join(nodes, by = c("delito" = "label")) %>%
-  rename(from = id)
-edges <- edges %>%
-  left_join(nodes, by = c("escuela_nivel" = "label")) %>% 
-  rename(to = id)
-
-edges <- select(edges, from, to, weight)
-#create a network object
-crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
-plot(crime_network, vertex.cex =3) #, mode = "circle")
-
-my.colors <- c(rep("red"), rep("blue"))
-gplot(crime_network, gmode="twomode", 
-      # label=c(rownames(crime_network),colnames(crime_network)),
-      vertex.cex=2,
-      usearrows=TRUE,
-      label.col = my.colors,
-      main = "Crime to School Network: Crime = Red, School = Blue",
-)
+mtx <- crime150[, c("delito", "escuela_nivel")]
+# glimpse(mtx)
+mtx_fin <- mtx %>% drop_na() #[complete.cases(mtx), ] #drop na's #na.omit(mtx) 
+# glimpse(mtx_fin)
 
 
+
+bin_crime <- as.data.frame.matrix(table(mtx_fin))
+mtx_full <- as.matrix(bin_crime)
+bin_crime <- as.matrix((bin_crime>0) +0)
+
+crime_net <- network(bin_crime)
 
 ```
 
-
-```{r echo=FALSE message=FALSE, warning=FALSE}
-install_github("DougLuke/UserNetR")
-
-
-net1 <- network::network(crime_network, matrix.type = "adjacency")
-# summary(net1)
-# gplot(net1, vertex.col = 2, displaylabels = FALSE)
-net2 <- network(crime_network, matrix.type = 'edgelist')
-# gplot(net2, vertex.col = 2, displaylabels = FALSE)
-# summary(net2)
-# igraph
-# detach(package:network)
-# rm(crime_network)
-library(igraph)
-
-
-crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
-# crime_igraph
-
-# plot(crime_igraph, edge.arrow.size = .02)
-# plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE)
-
-library(tidygraph)
-library(ggraph)
-
-crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
-crimes_igraph_tidy <- as_tbl_graph(crime_igraph)
-
-# 
-# class(crimes_tidy)
-# class(crimes_igraph_tidy)
-# class(crime_igraph)
-
-arrangeweight <- crimes_tidy %>% activate(edges) %>% arrange(desc(weight))
-ggraph(crimes_tidy) + geom_edge_link() + geom_node_point() +theme_graph()
-
-ggraph(crimes_tidy, layout = "graphopt") +
-  geom_node_point() +
-  geom_edge_link(aes(width = weight), alpha = .8) +
-  scale_edge_width(range = c(.2, 2)) +
-  # geom_node_circle(aes(color("green"))) +
-  geom_node_text(aes(label = label), repel = TRUE) +
-  labs(edge_width = "crime") + theme_graph()
-
-ggraph(crimes_tidy, layout = "linear") + 
-  geom_edge_arc(aes(width = weight), alpha = 0.8) + 
-  scale_edge_width(range = c(0.2, 2)) +
-  geom_node_text(aes(label = label)) +
-  labs(edge_width = "crime") +
-  theme_graph()
-
-#3d?
-# install.packages("networkD3")
-library(visNetwork)
-library(networkD3)
-
-nodes_d3 <- mutate(nodes, id = id - 1)
-edges_d3 <- mutate(edges, from = from - 1, to = to - 1)
-sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to", 
-              NodeID = "label", Value = "weight", fontSize = 16, unit = "crime(s)")
-
-
-
-```
 
 ## Latent Space Clustering
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(latentnet)
 # 
 # help("sampson")
@@ -209,7 +137,7 @@ set.seed(3141)
 #   space positions.
 # Below, the G parameter fits 3 groups. The optional argument "verbose" is 
 #   used to make ergmm print out diagnostics of its progress:
-crime.fit <- ergmm(crime_network ~ euclidean(d = 2, G = 3), verbose = TRUE)
+crime.fit <- ergmm(crime_net ~ euclidean(d = 2, G = 3), verbose = TRUE)
 
 summary(crime.fit)
 
@@ -219,7 +147,7 @@ summary(crime.fit)
 crime.fit$mcmc.mle
 
 #To see position scores for each of the 163 crimes monks:
-crime.fit$mcmc.mle$Z
+crime.fit$mcmc.mle$Z[1:15]
 
 # To see the clusters found: 3 clusters!
 crime.fit$mcmc.pmode$Z.K
@@ -244,10 +172,10 @@ plot(crime.fit, what = "pmean")
 plot(crime.fit, what=4)
 
 # To produce an "animation" of the sampler's evolution:
-for (i in 1:crime.fit$control$sample.size) {
-	plot(crime.fit, what = i)
-	Sys.sleep(0.1)
-	}
+# for (i in 1:crime.fit$control$sample.size) {
+# 	plot(crime.fit, what = i)
+# 	Sys.sleep(0.1)
+# 	}
 
 # To assess goodness of fit (page 20):
 crime.fit <- gof(crime.fit)
@@ -256,7 +184,7 @@ summary(crime.fit)
 plot(crime.fit)
 ```
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 # Pavel N. Krivitsky and Mark S. Handcock, "Fitting Position Latent
 #  Class Models for SOcial Networks with [package] latentnet"
@@ -266,7 +194,7 @@ plot(crime.fit)
 # Section 2.1
 
 
-network.vertex.names(crime_network)
+network.vertex.names(crime_net)
 # crime_network %v% "group"
 
 # Now, -- What is the LATENT SPACE model??
@@ -282,7 +210,7 @@ network.vertex.names(crime_network)
 # We use the program ergmm (note the extra "m") in package latentnet.
 # NOTE: The code below differs from that at the bottom of
 #   Krivitsky-Handcock page 5:
-# crime.fit2 <- ergmm(crime_network ~ euclidean(d=2, G=0), tofit=c("mle"))
+crime.fit2 <- ergmm(crime_net ~ euclidean(d=2, G=0), tofit=c("mle"))
 
 # See the names of the things produced:
 names(crime.fit2)
@@ -329,7 +257,7 @@ Z
 # title(sub = "Color represents the estimated groups: Labels the groups found by Sampson")
 ```
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 # Compare the resulting plot to the one in Fig. 1 on page 7.
 #
@@ -340,7 +268,7 @@ Z
 set.seed(3141)
 # The G parameter fits 3 groups. "verbose" leads to
 #  more printout.
-crime.fit5 <- ergmm(crime_network ~ euclidean(d = 2, G = 5),
+crime.fit5 <- ergmm(crime_net ~ euclidean(d = 2, G = 5),
                       verbose = TRUE)
 # See the summary (which is not identical to, but very
 #  close to, the printout shown on page 9. Differences
@@ -386,10 +314,10 @@ plot(crime.fit5.gof)
 
 
 ## ERGM
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-class(crime_network)
-class(crimes_tidy)
+# class(crime_network)
+# class(crimes_tidy)
 
 
 # Make the 'statnet' suite of programs (etc) available. 
@@ -411,39 +339,223 @@ class(crimes_tidy)
 # legend('bottomleft', legend=c('Local', 'State', 'National'),
 #         col=2:4, pch=19, pt.cex=1.5)
 # 
-
-# Section 11.2.1: Building a Null Model (p. 167)
-require(ergm)
-DSmod0 <- ergm(crime_network ~ edges,
-               control=control.ergm(seed=40))
-class(DSmod0)
-summary(DSmod0)
-
-
-summary(crime_network)
-
-DSmod1 <- ergm(crime_network ~ edges +
-                 nodefactor('lead_agency') +
-                 nodecov('tob_yrs') ,
-                 control=control.ergm(seed=40))
-
-# Note (R.B.):
-d <- gden(crime_network)
-d
-log(d/(1-d)) # This (logit of density) is the same as the model coefficient,
-#              for the ERGM model that includes ONLY an intercept.
-coef(DSmod0)[1]
-exp(coef(DSmod0))[1] / (1 + exp(coef(DSmod0))[1])
-plogis(coef(DSmod0)[1]) # This is the inverse logit of the coefficient,
-#                         which gives us back the network's density.
-
-?scatter.smooth
-
-# Then, after reading the resulting 'Help' page, type:
-scatter.smooth(crime_tidy %v% 'weight',
-               degree(crimes_tidy, gmode='graph'),
-               xlab='Weight',
-               ylab='Degree')
+# 
+# # Section 11.2.1: Building a Null Model (p. 167)
+# require(ergm)
+# DSmod0 <- ergm(crime_net ~ edges,
+#                control=control.ergm(seed=40))
+# class(DSmod0)
+# summary(DSmod0)
+# 
+# 
+# summary(crime_net)
+# 
+# DSmod1 <- ergm(crime_network ~ edges +
+#                  nodefactor('lead_agency') +
+#                  nodecov('tob_yrs') ,
+#                  control=control.ergm(seed=40))
+# 
+# # Note (R.B.):
+# d <- gden(crime_net)
+# d
+# log(d/(1-d)) # This (logit of density) is the same as the model coefficient,
+# #              for the ERGM model that includes ONLY an intercept.
+# coef(DSmod0)[1]
+# exp(coef(DSmod0))[1] / (1 + exp(coef(DSmod0))[1])
+# plogis(coef(DSmod0)[1]) # This is the inverse logit of the coefficient,
+# #                         which gives us back the network's density.
+# 
+# ?scatter.smooth
+# 
+# # Then, after reading the resulting 'Help' page, type:
+# scatter.smooth(crime_tidy %v% 'weight',
+#                degree(crimes_tidy, gmode='graph'),
+#                xlab='Weight',
+#                ylab='Degree')
 
 
 ```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+# <!-- crime150 <- read_xlsx("C:/Users/LW/Box/Mexico City Police 2020/data/buffer_150_crime3.xlsx") -->
+# 
+# <!-- #https://www.jessesadler.com/post/network-analysis-with-r/ -->
+# 
+# <!-- # Here we create nodes and edge lists to build our network -->
+# <!-- require(tidyverse) -->
+# 
+# <!-- #create node list from the data -->
+# <!-- sources <- crime150 %>% -->
+# <!--   distinct(delito) %>% -->
+# <!--   rename(label = delito) -->
+# 
+# 
+# <!-- destinations <- crime150 %>% -->
+# <!--   distinct(escuela_nivel) %>% -->
+# <!--   rename(label = escuela_nivel) -->
+# 
+# <!-- #put all wanted nodes into one column with id -->
+# <!-- nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id") -->
+# 
+# 
+# <!-- #create edges and edge weight from the nodes -->
+# <!-- per_route <- crime150 %>% -->
+# <!--   group_by(delito, escuela_nivel) %>% -->
+# <!--   summarise(weight = n()) %>% -->
+# <!--   ungroup() -->
+# <!-- per_route -->
+# 
+# <!-- # node_mtx <- as.matrix(per_route) -->
+# 
+# <!-- #link ids -->
+# <!-- edges <- per_route %>% -->
+# <!--   left_join(nodes, by = c("delito" = "label")) %>% -->
+# <!--   rename(from = id) -->
+# <!-- edges <- edges %>% -->
+# <!--   left_join(nodes, by = c("escuela_nivel" = "label")) %>%  -->
+# <!--   rename(to = id) -->
+# 
+# <!-- edges <- select(edges, from, to, weight) -->
+# 
+# <!-- #create a network object -->
+# <!-- crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE) -->
+# <!-- plot(crime_network, vertex.cex =3) #, mode = "circle") -->
+# 
+# <!-- my.colors <- c(rep("red"), rep("blue")) -->
+# <!-- gplot(crime_network, gmode="twomode",  -->
+# <!--       # label=c(rownames(crime_network),colnames(crime_network)), -->
+# <!--       vertex.cex=2, -->
+# <!--       usearrows=TRUE, -->
+# <!--       label.col = my.colors, -->
+# <!--       main = "Crime to School Network: Crime = Red, School = Blue", -->
+# <!-- ) -->
+# 
+# 
+# 
+# <!-- ``` -->
+# 
+# 
+# <!-- ```{r echo=FALSE, message=FALSE, warning=FALSE} -->
+# <!-- install_github("DougLuke/UserNetR") -->
+# 
+# 
+# <!-- net1 <- network::network(crime_network, matrix.type = "adjacency") -->
+# <!-- # summary(net1) -->
+# <!-- # gplot(net1, vertex.col = 2, displaylabels = FALSE) -->
+# <!-- net2 <- network(crime_network, matrix.type = 'edgelist') -->
+# <!-- # gplot(net2, vertex.col = 2, displaylabels = FALSE) -->
+# <!-- # summary(net2) -->
+# <!-- # igraph -->
+# <!-- # detach(package:network) -->
+# <!-- # rm(crime_network) -->
+# <!-- library(igraph) -->
+# 
+# 
+# <!-- crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE) -->
+# <!-- # crime_igraph -->
+# 
+# <!-- # plot(crime_igraph, edge.arrow.size = .02) -->
+# <!-- # plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE) -->
+# 
+# <!-- library(tidygraph) -->
+# <!-- library(ggraph) -->
+# 
+# <!-- crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE) -->
+# <!-- crimes_igraph_tidy <- as_tbl_graph(crime_igraph) -->
+# 
+# <!-- #  -->
+# <!-- # class(crimes_tidy) -->
+# <!-- # class(crimes_igraph_tidy) -->
+# <!-- # class(crime_igraph) -->
+# 
+# <!-- arrangeweight <- crimes_tidy %>% activate(edges) %>% arrange(desc(weight)) -->
+# <!-- ggraph(crimes_tidy) + geom_edge_link() + geom_node_point() +theme_graph() -->
+# 
+# <!-- ggraph(crimes_tidy, layout = "graphopt") + -->
+# <!--   geom_node_point() + -->
+# <!--   geom_edge_link(aes(width = weight), alpha = .8) + -->
+# <!--   scale_edge_width(range = c(.2, 2)) + -->
+# <!--   # geom_node_circle(aes(color("green"))) + -->
+# <!--   geom_node_text(aes(label = label), repel = TRUE) + -->
+# <!--   labs(edge_width = "crime") + theme_graph() -->
+# 
+# <!-- ggraph(crimes_tidy, layout = "linear") +  -->
+# <!--   geom_edge_arc(aes(width = weight), alpha = 0.8) +  -->
+# <!--   scale_edge_width(range = c(0.2, 2)) + -->
+# <!--   geom_node_text(aes(label = label)) + -->
+# <!--   labs(edge_width = "crime") + -->
+# <!--   theme_graph() -->
+# 
+# <!-- #3d? -->
+# <!-- # install.packages("networkD3") -->
+# <!-- library(visNetwork) -->
+# <!-- library(networkD3) -->
+# 
+# <!-- nodes_d3 <- mutate(nodes, id = id - 1) -->
+# <!-- edges_d3 <- mutate(edges, from = from - 1, to = to - 1) -->
+# <!-- sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to",  -->
+# <!--               NodeID = "label", Value = "weight", fontSize = 16, unit = "crime(s)") -->
+# 
+# 
+# 
+# <!-- ``` -->
+# 
+# 
+# <!-- ##igraph and igraphs -->
+# <!-- ```{r echo=FALSE, message=FALSE, warning=FALSE} -->
+# 
+# 
+# <!-- # create igraph -->
+# <!-- # detach(package:network) -->
+# <!-- rm(crime_network) -->
+# <!-- library(igraph) -->
+# 
+# 
+# <!-- # crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE) -->
+# <!-- # crime_igraph -->
+# 
+# <!-- # plot(crime_igraph, edge.arrow.size = .02) -->
+# <!-- # plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE) -->
+# 
+# <!-- library(tidygraph) -->
+# <!-- library(ggraph) -->
+# 
+# <!-- crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE) -->
+# <!-- # crimes_igraph_tidy <- as_tbl_graph(crime_igraph) -->
+# 
+# <!-- class(crimes_tidy) -->
+# <!-- # class(crimes_igraph_tidy) -->
+# <!-- # class(crime_igraph) -->
+# 
+# <!-- arrangeweight <- crimes_tidy %>% activate(edges) %>% arrange(desc(weight)) -->
+# <!-- ggraph(crimes_tidy) + geom_edge_link() + geom_node_point() +theme_graph() -->
+# 
+# <!-- ggraph(crimes_tidy, layout = "graphopt") + -->
+# <!--   geom_node_point() + -->
+# <!--   geom_edge_link(aes(width = weight), alpha = .8) + -->
+# <!--   scale_edge_width(range = c(.2, 2)) + -->
+# <!--   # geom_node_circle(aes(color("green"))) + -->
+# <!--   geom_node_text(aes(label = label), repel = TRUE) + -->
+# <!--   labs(edge_width = "crime") + theme_graph() -->
+# 
+# <!-- ggraph(crimes_tidy, layout = "linear") +  -->
+# <!--   geom_edge_arc(aes(width = weight), alpha = 0.8) +  -->
+# <!--   scale_edge_width(range = c(0.2, 2)) + -->
+# <!--   geom_node_text(aes(label = label)) + -->
+# <!--   labs(edge_width = "crime") + -->
+# <!--   theme_graph() -->
+# 
+# <!-- #3d? -->
+# <!-- # install.packages("networkD3") -->
+# <!-- library(visNetwork) -->
+# <!-- library(networkD3) -->
+# 
+# <!-- nodes_d3 <- mutate(nodes, id = id - 1) -->
+# <!-- edges_d3 <- mutate(edges, from = from - 1, to = to - 1) -->
+# <!-- sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to",  -->
+# <!--               NodeID = "label", Value = "weight", fontSize = 16, unit = "crime(s)") -->
+
+
+ ```
