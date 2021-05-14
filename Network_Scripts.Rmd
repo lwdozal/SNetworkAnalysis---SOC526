@@ -154,6 +154,8 @@ gplot(net1, vertex.col = my.colors, main = "Edgelist: Red = 'from', Blue = 'to'"
 ```
 
 ## Latent Space Clustering
+
+###Crimefit
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(latentnet)
 # 
@@ -242,6 +244,8 @@ summary(crime.fit)
 plot(crime.fit)
 ```
 
+###Crimefit2
+
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 # Pavel N. Krivitsky and Mark S. Handcock, "Fitting Position Latent
@@ -309,11 +313,12 @@ Z
 
 # Now let's plot the position locations (determined by MLE)
 #  and the groups:
-# plot(crime.fit2, label = oneL, vertex.col = oneLcolors,
-#      what="mle", main="MLE positions", print.formula=TRUE,
-#      labels = TRUE)
-# title(sub = "Color represents the estimated groups: Labels the groups found by Sampson")
+plot(crime.fit2, label = oneL, vertex.col = oneLcolors,
+     what="mle", main="MLE positions", print.formula=TRUE,
+     labels = TRUE)
+title(sub = "Color represents the estimated groups: Labels the groups found")
 ```
+###Crimefit5
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -358,10 +363,10 @@ plot(crime.fit5, pie=TRUE, vertex.cex=2.5, labels=TRUE)
 plot(crime.fit5, what = 1000)
 
 # To see an animation of the sampler's evolution:
-for (i in 1:crime.fit5$control$sample.size) {
-  plot(crime.fit5, what = i)
-  Sys.sleep(0.1)
-}
+# for (i in 1:crime.fit5$control$sample.size) {
+#   plot(crime.fit5, what = i)
+#   Sys.sleep(0.1)
+# }
 
 # To assess goodness of fit (page 20):
 crime.fit5.gof <- gof(crime.fit5)
@@ -371,7 +376,6 @@ plot(crime.fit5.gof)
 ```
 
 
-## ERGM
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 # class(crime_network)

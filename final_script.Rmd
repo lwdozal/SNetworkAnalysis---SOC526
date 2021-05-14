@@ -39,9 +39,19 @@ library("lemon")
 
 ```
 
-## create network, nodes and edges
+# Methods
+After locating crimes reported to the police in a 150-meter radius around schools in Mexico City, further analysis on their relations to the school could be beneficial for implementing effective programs that help deter future crime around school neighborhoods. For this reason, we how to answer is how do crimes cluster around specific schools and which crimes happen in conjunction with each other? Looking at the data in a spatialized geographic version is helpful to understand which school attract the most crime, or "hot spots", but it will be beneficial to the connections between schools and the crimes that surround them.
 
-Creating a network for analysis actualizes connections between nodes and edges. These entities are used to create network objects that represent adjacency matrices, or sociomatricies, which are square matricies with nodes as the network's rows and columns and the binary connections (0, 1) as their edges. At its simplist connection, for example, a link between two nodes is represented by a 1, 0 otherwise. Sometimes networks can be directed where a node sends information to a recieving node, but the information is not reciprocated. In our case, our data is undirected and represents two groups, crimes and schools. ADD DESCRIPTION OF SOCIOMATRIX?? Density of the network = 0.03590093 
+An example of analyzing geographic space and network space in the same context is provided by Radlil et al. where they use relative location and structural position to connect territorial gang rivalries (Radil et al., 2010). The structural embeddedness and positionality of the geography and the network allow the researchers to get a better understanding of gang violence spread across gang territories based on an actor's position in the network, their relationships, and the spatial settings provided by the observed space. In their case, the territory they study is almost isolated by highways, rivers, and industrial zones in East Los Angeles. Because of a history of area violence stemming from various socio demographic factors, this areas was ripe with gang violence at the time of the study (Radil et al., 2010). To understand embeddedness, they applied a specific methodology where they 1) reviewed the geographic area boundaries, 2) got frequencies of violent crimes per census block, 3) created a rivalry matrix to show which violent crimes are done from different gangs, 4) multiplied both geographic areas and rivalry matrix together from two separate matrix blocks, 5) They then spatialized the social networks by finding subsets, and used CONCOR to find equivalent geographies, 6) A dendrogram and Analysis of Variance (ANOVA) were used along with Geographical Information System (GIS) mapping to review the results (Radil et al., 2010). 
+
+For the crime to school dataset, all crimes are located around a school's 150m radius, and understanding which are more prevalent, or which might happen in conjunction are important explorations. In this case, understanding centrality measures, duality, and bi-dynamic line graphs will help understand the overall clustering of crimes, the between and within crime and school group relations, and the ties between crime and schools. This is done by creating matrix structures of the crime and school labels, converting it into network form, and keeping separate versions. 
+
+
+# Results
+
+## Creating the Network
+
+Creating a network for analysis actualizes connections between nodes and edges. These entities are used to create network objects that represent adjacency matrices, or semimatrices, which are square matrices with nodes as the network's rows and columns and the binary connections (0, 1) as their edges (Luke, 2015). At its simplest connection, for example, a link between two nodes is represented by a 1, 0 otherwise. Sometimes networks can be directed where a node sends information to a receiving node, but the information is not reciprocated. In our case, our data is undirected and represents two groups, crimes and schools. The crime group is comprised of each unique crime reported to the police, and the school groups shows categories for school levels i.e. preschool, public middle school, private elementary, etc. The network has 474 ties, 163 nodes, and a density of 0.036. Density can be explained as the proportion of ties found to the maximum number of possible ties (Luke, 2015). As the density is low, it shows that the network is not very interconnected, meaning nodes might not be tied to one another very often, you can see this in Figure 1 where all the outside nodes have just one connection to the inner network space.
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
@@ -176,7 +186,7 @@ kable(sort.b[153:163])
 # top.b <- names(sort(b.cent))[155:163]
 # Draw the graph with node sizes proportional to closeness centralitiy scores:
 gplot(crime_net, vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * b.cent) + #  label=names(b.cent),
-title(main = "Betweenness Centrality:crime Network")
+title(sub = "Betweenness Centrality:crime Network")
 
 ```
 
@@ -322,7 +332,7 @@ gplot(S, edge.lwd = 4*S,
 ```
 
 
-### Bi-dynamic line graph of school-to-school ties WITHIN crimes
+### Bi-dynamic line graph of school-to-school ties WITHIN crimes (showing first 10)
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 kable(ssc[1:10,1:10])
 
