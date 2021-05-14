@@ -20,7 +20,7 @@ My methods
 Results
 conclusion
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 library("statnet")
 library("dplyr")
 library("knitr")
@@ -44,8 +44,11 @@ library("devtools")
 
 ```
 
-## Setup
-```{r echo=FALSE message=FALSE, warning=FALSE}
+## create network, nodes and edges
+
+Creating a network for analysis actualizes connections between nodes and edges. These entities are used to create network objects that represent adjacency matrices, or sociomatricies, which are square matricies with nodes as the network's rows and columns and the binary connections (0, 1) as their edges. At its simplist connection, for example, a link between two nodes is represented by a 1, 0 otherwise. Sometimes networks can be directed where a node sends information to a recieving node, but the information is not reciprocated. In our case, our data is undirected and represents two groups, crimes and schools. ADD DESCRIPTION OF SOCIOMATRIX?? Density of the network = 0.03590093 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 crime150 <- read_xlsx("C:/Users/LW/Box/Mexico City Police 2020/data/buffer_150_crime3.xlsx")
 
@@ -56,6 +59,8 @@ delito <- crime150$categoria_
 crime_spot <- crime150$calle_hech
 crime_neighbrhd <- crime150$colonia_he
 crime_region <- crime150$alcaldia_h
+
+length(unique(delito_espesifico))
 
 #school columns
 escuela_todo <- crime150$escuela_nombre
@@ -81,7 +86,7 @@ summary(crime_mtx, print.adj = FALSE)
 
 mtx <- crime150[, c("delito", "escuela_nivel")]
 # glimpse(mtx)
-mtx_fin <- na.omit(mtx) #mtx %>% drop_na() #[complete.cases(mtx), ] #drop na's
+mtx_fin <- mtx %>% drop_na() #[complete.cases(mtx), ] #drop na's #na.omit(mtx) 
 # glimpse(mtx_fin)
 
 
@@ -90,137 +95,81 @@ bin_crime <- as.data.frame.matrix(table(mtx_fin))
 mtx_full <- as.matrix(bin_crime)
 bin_crime <- as.matrix((bin_crime>0) +0)
 
-dim(mtx_fin)
+crime_net <- network(bin_crime)
+# dim(mtx_fin)
 
-```
-
-## create network, nodes and edges
-
-Creating a network for analysis actualizes connections between nodes and edges. These entities are used to create network objects that represent adjacency matrices, or sociomatricies, which are square matricies with nodes as the network's rows and columns and the binary connections (0, 1) as their edges. At its simplist connection, for example, a link between two nodes is represented by a 1, 0 otherwise. Sometimes networks can be directed where a node sends information to a recieving node, but the information is not reciprocated. In our case, our data is undirected and represents two grops, crimes and schools. To build this network both crime and school columns are joined together to create one long list of nodes. A weights column is also created in a separate grouping of the crime and school columns to show their connecting measures and are labeled "to" and "from". The network is then created by implementing the nodes as rows and columns, and the edge list as the matrix meat. 
-
-```{r echo=FALSE message=FALSE, warning=FALSE}
-require(tidyverse)
-
-#create node list from the data
-sources <- crime150 %>%
-  distinct(delito) %>%
-  rename(label = delito)
-
-
-destinations <- crime150 %>%
-  distinct(escuela_nivel) %>%
-  rename(label = escuela_nivel)
-
-#put all wanted nodes into one column with id
-nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id")
-
-
-#create edges and edge weight from the nodes
-per_route <- crime150 %>%
-  group_by(delito, escuela_nivel) %>%
-  summarise(weight = n()) %>%
-  ungroup()
-per_route
-
-# node_mtx <- as.matrix(per_route)
-
-#link ids
-edges <- per_route %>%
-  left_join(nodes, by = c("delito" = "label")) %>%
-  rename(from = id)
-edges <- edges %>%
-  left_join(nodes, by = c("escuela_nivel" = "label")) %>% 
-  rename(to = id)
-
-edges <- select(edges, from, to, weight)
-#create a network object
-crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
-plot(crime_network, vertex.cex =3) #, mode = "circle")
+# summary(crime_net)
 
 my.colors <- c(rep("red"), rep("blue"))
-gplot(crime_network, gmode="twomode", 
-      # label=c(rownames(crime_network),colnames(crime_network)),
+gplot(crime_net, gmode="twomode", 
+      label=c(rownames(delito_espesifico),colnames(nivel)),
       vertex.cex=2,
       usearrows=TRUE,
       label.col = my.colors,
-      main = "Crime to School Network: Crime = Red, School = Blue",
+      main = "Crime to School Network: Blue = School, Red = Crime",
 )
-
-install_github("DougLuke/UserNetR")
-
-
-net1 <- network::network(crime_network, matrix.type = "adjacency")
-# summary(net1)
-# gplot(net1, vertex.col = 2, displaylabels = FALSE)
-net2 <- network(crime_network, matrix.type = 'edgelist')
-# gplot(net2, vertex.col = 2, displaylabels = FALSE)
-# summary(net2)
-# igraph
-# detach(package:network)
-# rm(crime_network)
-library(igraph)
-
-
-crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
-# crime_igraph
-
-# plot(crime_igraph, edge.arrow.size = .02)
-# plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE)
-
-library(tidygraph)
-library(ggraph)
-
-crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
-crimes_igraph_tidy <- as_tbl_graph(crime_igraph)
-
-
 ```
+
 
 ## Centrality Measures
 
+Looking at the centrality measures of a network helps to identify various ways in which a node is connected to other nodes. There are 3 basic types of centrality measures including degree centrality, closeness centrality, and betweenness centrality. Degree centrality measures the number of connections a node is to other nodes within the network (Wasserman, Faust, 1994). Closeness centrality meausures how close a node is to all the other nodes in the network based on their distance apart, or how long it takes to get from one node to another. Betweenness centrality measures how many nodes a particular node sits between, for example, how central is this node for facilitating information flow within a network, are they an essential stop or can they be skipped?
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
+The degree centrality for the top three school nodes is, PRIMARIA GENERAL (d = 198) translates to "public elementary school", PREESCOLAR GENERAL(d = 160) translantes to "public preschool", and SECUNDARIA GENERAL (d = 116) translates to "public middle school". The degree centrality for the top crime nodes is VIOLENCIA FAMILIAR (d = 30) translates to "domestic violence", ROBO A TRANSEUNTE EN VIA PUBLICA CON VIOLENCIA (d = 28) translates to "mugging", ROBO A NEGOCIO SIN VIOLENCIA (d = 24) translates to "non-violent business robbery", and AMENAZAS (d = 24) translates to "threats." With this information we can assume that public schools have a higher number of crimes in their neighborhood, and the top crimes in a school's a 150m radius are domestic "violence", "mugging", "non-violent business robbery", and "threats." Overall, the top ten nodes with the highest degree measures were schools, which is inline with the type of data we are using as schools in the center of their own 150m radius. 
+
+The closeness centrality measures for the top three school nodes are "public elementary school", (c = 0.64), "public preschool" (c = 0.55), and "public middle school"(c = 0.47). The top crime centrality measure are "domestic violence" (c = 0.50), "mugging" (c = 0.49), "business robbery" (c = .048), and "threats" (c = 0.48). The top school and crime centralities are the same, but their order of greater closeness starts with "public elementary school", "public preschool", "domestic violence", and then "mugging". We can assume that these top nodes happen in close proximity to each other.
+
+The top betweenness centrality measures for school nodes are also "public elementary school" (b = 11055.1143),"public preschool" (b = 6530.8892), and "public middle school" (b = 3473.3928). The top betweenness scores for crime slightly changed and their measures are, "domestic violence" (b = 1406.7534), "mugging" (b = 977.0407), and ROBO DE VEHICULO DE SERVICIO PARTICULAR SIN VIOLENCIA (b = 889.8290) translates to "non-violent theft of a private vehicle". The top 5 betweeness nodes overall are schools, meaning that schools are a central componenet for crimes in the neighborhood. This is expected because of the nature of the data and how the radius around the schools was set-up to collect the crime data.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 
 require(sna)
 
+# summary(crime_net)
+# crime_net$val
 
 print("Degree Centrality: Crimes")
-b.cent <- degree(crimes_tidy)
-b.cent
-# names(b.cent) <- crimes_tidy %v% "label"
-sort(b.cent)
-# Draw the graph with node sizes proportional to closeness centralitiy scores:
-gplot(crime_network, label=rownames(crime_network), usearrows=TRUE, vertex.cex = .05 * b.cent) +
+d.cent <- degree(crime_net) #[1:126, 1:126])
+# d.cent
+# table(d.cent)
+names(d.cent) <- crime_net %v% "vertex.names"
+sort.d <- sort(d.cent)
+sort.d[149:163]
+top.d <- names(sort(d.cent))[157:163]
+# Draw the graph with node sizes proportional to betweenness centralitiy scores:
+gplot(crime_net,  label=top.d, vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * d.cent) + #label=names(d.cent), #label=names(d.cent),
 title(main = "Degree Centrality:Crime Network")
-#node c (99.69) and node a (83.19) had the highest betweenness centralities
 
-c.cent <- closeness(crimes_tidy) #, gmode = "digraph")
 
 
 print("Closeness Centrality: Crimes")
-c.cent
-# names(c.cent) <- crimes_tidy %v% "vertex.names"
-sort(c.cent)
+c.cent <- closeness(crime_net, gmode = "digraph")
+# c.cent
+names(c.cent) <- crime_net %v% "vertex.names"
+# sort(c.cent)
+sort.c <- sort(c.cent)
+sort.c[153:163]
+top.c <- names(sort(c.cent))[155:163]
 # note there are all 0s for closeness centrality
-
 # Draw the graph with node sizes proportional to closeness centralitiy scores:
-gplot(crime_network, usearrows=TRUE, vertex.cex = 5 * c.cent) + #label=rownames(bin_crime)
+gplot(crime_net,  label=top.c, vertex.col = my.colors, usearrows=TRUE, vertex.cex = 5 * c.cent) + # label=names(c.cent),
 title(main = "Closeness Centrality:Crime Network")
 
 print("Betweeness Centrality: Crimes")
-b.cent <- betweenness(crimes_tidy) #, "digraph")
-# names(b.cent_dis) <- net_dis %v% "vertex.names"
-sort(b.cent)
+b.cent <- betweenness(crime_net, gmode = "digraph")
+# table(b.cent)
+names(b.cent) <- crime_net %v% "vertex.names"
+sort.b <- sort(b.cent)
+sort.b[153:163]
+top.b <- names(sort(b.cent))[155:163]
 # Draw the graph with node sizes proportional to closeness centralitiy scores:
-gplot(crime_network, label=rownames(crime_network), usearrows=TRUE, vertex.cex = .05 * b.cent) +
+gplot(crime_net, label=top.b, vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * b.cent) + #  
 title(main = "Betweenness Centrality:crime Network")
-#node c (99.69) and node a (83.19) had the highest betweenness centralities
 
 ```
 
-
-## Hierarchical Clustering 
-```{r}
+## Hierarchical Clustering and structural distances
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 # In-class: CONCOR in R
 
 # Okay, let's see how to do something similar using the programs in the
@@ -233,16 +182,17 @@ title(main = "Betweenness Centrality:crime Network")
 
 require(sna)
 # Structural equivalence distance on the basis of (Euclidean) distance:
-page372 <- sedist(bin_crime, diag=FALSE, method="euclidean")
-round(page372[1:10,1:10], digits = 3) #
+eucl_str <- sedist(bin_crime, diag=FALSE, method="euclidean")
+round(eucl_str[1:10,1:10], digits = 3) #
 # The above is identical to page 372 in Wasserman-Faust (euc. distances)!
-page373 <- sedist(bin_crime, diag=FALSE, method="correlation")
-round(page373[1:5,1:5], digits =3)
+
+corr_str <- sedist(bin_crime, diag=FALSE, method="correlation")
+round(corr_str[1:5,1:5], digits =3)
 # The above is identical to the correlations on page 373!
 
 # Let's try some hierarchical clustering:
 require(stats)
-plot(hclust(as.dist(page372), method = "complete"))
+plot(hclust(as.dist(eucl_str), method = "complete"))
 # The above is identical to Fig. 9.7 (page 383) in Wasserman-Faust.
 # Looking at the plot (eyeballing it), if we wanted to divide this tree into (say)
 #   four blocks, we could do it with a horizontal line at a height of 
@@ -262,7 +212,7 @@ abline(4.4, 0, col="red", lwd = 2)
 # Here is a seat-of-the-pants way to do this:
 require(MASS)
 
-rough.dists <- (1 - page373) / 2
+rough.dists <- (1 - corr_str) / 2
 rough.dists <- dist(unique(rough.dists)) 
 # Thus, a correlation of -1 becomes a "rough.dist" of 1, and
 #     a correlation of +1 becomes a "rough.dist" of 0.
@@ -270,46 +220,6 @@ result <- isoMDS(rough.dists)
 coordinates <- result$points
 plot(coordinates[,1], coordinates[,2], type="p", main="Just like p. 387 in Wasserman-Faust!")
 text(coordinates[,1], coordinates[,2], labels = 1:37, pos = 2)
-
-
-
-##############################################################################################
-
-# memb <-rep(1, 37) # A list of 21 1's.
-# memb[b2] <- 2
-# memb
-# 
-# split1 <- rep(1, 37) # The number 1, repeated 21 times
-# split1[b2] <- 2 # So split has a "1" for each node in block 1, and a "2" for block 2.
-# # Let's see:
-# split1
-
-# require(sna)
-# crime.2block <- blockmodel(bin_crime, split1, plabels=rownames(bin_crime))
-# # Now let's use the "sna" program "plot.blockmodel" to plot what we found:
-# # crime.2block
-# # crime.2block <- dist(unique(crime.2block$block.membership)) 
-# crime.2block <- 
-# 
-# plot(crime.2block)
-# title(main = "Crime CDMX, 2-block split from CONCOR", adj=0)
-# # Notice (by looking at the plot) that managers in block 1 don't seek much advice
-# #   from managers in block 2. Here are the densities within and between the blocks:
-# crime.2block$block.model
-# 
-# # Compare this to the overall matrix density:
-# (sum(bin_crime)) / (37 * 36)
-# split4 <-rep(1,37)
-# split4[block1.2] <- 2
-# split4[block2.1] <- 3
-# split4[block2.2] <- 4
-
-# c <- grey(1:length(unique(crime.4block))/length(unique(crime.4block)))
-# crime.4block <- blockmodel(bin_crime, split4)
-# crime.4block <- dist(unique(crime.4block)) 
-# plot(crime.4block, col = c[crime.4block])
-# title("Crime, 4-block split", adj=0)
-
 
 
 ```
@@ -327,7 +237,8 @@ text(coordinates[,1], coordinates[,2], labels = 1:37, pos = 2)
 
 # Compute shortest paths:
 require(sna)
-gd <- geodist(bin_crime)
+# gd <- geodist(bin_crime)
+gd <- geodist(crime_net)
 gdist <- gd$gdist
 # Take a look at the shortest-path matrix:
 dim(gdist)
@@ -369,6 +280,8 @@ round(10 * AE, digits = 2)
 # Hierarchical clustering using "complete link" clustering:
 hc <- hclust(d = as.dist(AE), method = "complete")
 plot(hc)
+abline(4.4, 0, col="red", lwd = 2)
+
 # This gives the automorphic-equivalence groups for
 # Borgatti& Everett's Fig. 13, viz:
 #  {Mary, Bill}
@@ -386,13 +299,12 @@ plot(hc)
 # memberships[c(3,9)] <- 2
 # memberships[6] <- 3
 # memberships[c(11,10,8,4,1,2)] <- 4
-vertex.cols <- c("lightblue","midnightblue","brown","yellow")
+vertex.cols <- c("lightblue","green","brown","yellow")
 label.cols <- c("black","white","white","black")
 require(sna)
-gplot(gdist, label=names, usearrows=FALSE, vertex.cex=1.8,
+gplot(gdist, usearrows=FALSE, vertex.cex=1.8,
       label.cex=.8, vertex.col=vertex.cols[AE],
-      # label.col=label.cols[AE], label.pos=5,
-      gmode="kamadakawai")
+      label.col=label.cols[AE], label.pos=5, gmode="kamadakawai")
 title(main="Automorphic Equivalence Classes", sub="Borgatti & Everett, Soc Meth 1992, p. 30")
 
 ```
@@ -497,27 +409,187 @@ require(sna)
 # Plot matrix bin_crime:
 my.colors <- c(rep("red",nrow(bin_crime)), rep("blue", ncol(bin_crime)))
 gplot(bin_crime, gmode="twomode", 
-      # label=c(rownames(bin_crime),colnames(bin_crime)), 
+      label=c(rownames(bin_crime)[15:19],colnames(bin_crime)[15:19]),
       vertex.cex=1.5,
       usearrows=TRUE,
-      label.col = my.colors
+      # label.col = my.colors
+      vertex.cols = my.colors
 )
 # print(bin_crime)
 
 #create crime to school connections
 c <- bin_crime %*% t(bin_crime)
 gplot(c, edge.lwd = 4*c,
-      # label=rownames(c),
-      usearrows=TRUE)
+      label=rownames(c)[15:21],
+      usearrows=TRUE,
+      main = "Crime to School Connections")
 # plot school to crime connections
 S <- t(bin_crime) %*% bin_crime
 gplot(S, edge.lwd = 4*S,
       vertex.col="blue",
-      # label=rownames(S),
-      usearrows=TRUE)
+      label=rownames(S)[15:31],
+      usearrows=TRUE,
+      main = "School to Crime Connections")
 
 
 ```
+
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+# require(tidyverse)
+# 
+# # To build this network both crime and school columns are joined together to create one long list of nodes. A weights column is also created in a separate grouping of the crime and school columns to show their connecting measures and are labeled "to" and "from". The network is then created by implementing the nodes as rows and columns, and the edge list as the matrix meat. 
+# 
+# 
+# #create node list from the data
+# sources <- crime150 %>%
+#   distinct(delito) %>%
+#   rename(label = delito)
+# 
+# 
+# destinations <- crime150 %>%
+#   distinct(escuela_nivel) %>%
+#   rename(label = escuela_nivel)
+# 
+# #put all wanted nodes into one column with id
+# nodes <- full_join(sources, destinations, by = "label") %>% rowid_to_column("id")
+# 
+# 
+# #create edges and edge weight from the nodes
+# per_route <- crime150 %>%
+#   group_by(delito, escuela_nivel) %>%
+#   summarise(weight = n()) %>%
+#   ungroup()
+# # per_route
+# 
+# # node_mtx <- as.matrix(per_route)
+# 
+# #link ids
+# edges <- per_route %>%
+#   left_join(nodes, by = c("delito" = "label")) %>%
+#   rename(from = id)
+# edges <- edges %>%
+#   left_join(nodes, by = c("escuela_nivel" = "label")) %>% 
+#   rename(to = id)
+# 
+# edges <- select(edges, from, to, weight)
+# #create a network object
+# crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
+# # plot(crime_network, vertex.cex =3) #, mode = "circle")
+# 
+# my.colors <- c(rep("red"), rep("blue"))
+# gplot(crime_network, gmode="twomode", 
+#       label=c(rownames(delito_espesifico),colnames(nivel)),
+#       vertex.cex=2,
+#       usearrows=TRUE,
+#       label.col = my.colors,
+#       main = "Crime to School Network Edgelist: Red = 'from', Blue = 'to'",
+# )
+# 
+# install_github("DougLuke/UserNetR")
+# 
+# 
+# net1 <- network::network(crime_network, matrix.type = "adjacency")
+# summary(net1)
+# gplot(net1, vertex.col = my.colors, main = "Edgelist: Red = 'from', Blue = 'to'") #, displaylabels = TRUE, label.col = my.colors)
+# # ?summary
+#  
+#  ###################################################################################
+#  
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+# The crime to schools network only has a degree centrality where the crime with id 1, or "PORTACION DE ARMA DE FUEGO" translated to carrying a firearm, has the highest connections to schools (n = 51), followed by 2, or "ROBO DE ACCESORIOS DE AUTO" translated to stealing autoparts, (n = 29), 3, or "ROBO DE VEHICULO DE SERVICIO PARTICULAR SIN VIOLENCIA" translated to theft of a private vehicle", (n = 20), and 4, or "LESIONES INTENCIONALES POR ARMA BLANCA" translated to stabbings, (n = 17).
+# 
+# 
+# 
+# Zeros for the closeness and betweenness centralities are interesting to speculate in regards to school perimiter. Because these crimes don't seem to
+# require(sna)
+# 
+# summary(crime_network)
+# 
+# print("Degree Centrality: Crimes")
+# d.cent <- degree(crime_network) #[1:126, 1:126])
+# d.cent
+# table(d.cent)
+# names(d.cent) <- crime_network %v% "id"
+# sort(d.cent)
+# # Draw the graph with node sizes proportional to betweenness centralitiy scores:
+# gplot(crime_network, label=names(d.cent), vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * d.cent) +
+# title(main = "Degree Centrality:Crime Network")
+# 
+# 
+# 
+# print("Closeness Centrality: Crimes")
+# c.cent <- closeness(crime_network, gmode = "digraph")
+# c.cent
+# names(c.cent) <- crime_network %v% "vertex.names"
+# sort(c.cent)
+# # note there are all 0s for closeness centrality
+# 
+# # Draw the graph with node sizes proportional to closeness centralitiy scores:
+# gplot(crime_network, label=names(b.cent), vertex.col = my.colors, usearrows=TRUE, vertex.cex = 5 * c.cent) + #label=rownames(bin_crime)
+# title(main = "Closeness Centrality:Crime Network")
+# 
+# print("Betweeness Centrality: Crimes")
+# b.cent <- betweenness(crime_network, gmode = "digraph")
+# b.cent
+# names(b.cent) <- crime_network %v% "vertex.names"
+# sort(b.cent)
+# # Draw the graph with node sizes proportional to closeness centralitiy scores:
+# gplot(crime_network, label=names(b.cent), vertex.col = my.colors, usearrows=TRUE, vertex.cex = .05 * b.cent) +
+# title(main = "Betweenness Centrality:crime Network")
+# #node c (99.69) and node a (83.19) had the highest betweenness centralities
+
+```
+
+
+
+```{r}
+##############################################################################################
+
+# memb <-rep(1, 37) # A list of 21 1's.
+# memb[b2] <- 2
+# memb
+# 
+# split1 <- rep(1, 37) # The number 1, repeated 21 times
+# split1[b2] <- 2 # So split has a "1" for each node in block 1, and a "2" for block 2.
+# # Let's see:
+# split1
+
+# require(sna)
+# crime.2block <- blockmodel(bin_crime, split1, plabels=rownames(bin_crime))
+# # Now let's use the "sna" program "plot.blockmodel" to plot what we found:
+# # crime.2block
+# # crime.2block <- dist(unique(crime.2block$block.membership)) 
+# crime.2block <- 
+# 
+# plot(crime.2block)
+# title(main = "Crime CDMX, 2-block split from CONCOR", adj=0)
+# # Notice (by looking at the plot) that managers in block 1 don't seek much advice
+# #   from managers in block 2. Here are the densities within and between the blocks:
+# crime.2block$block.model
+# 
+# # Compare this to the overall matrix density:
+# (sum(bin_crime)) / (37 * 36)
+# split4 <-rep(1,37)
+# split4[block1.2] <- 2
+# split4[block2.1] <- 3
+# split4[block2.2] <- 4
+
+# c <- grey(1:length(unique(crime.4block))/length(unique(crime.4block)))
+# crime.4block <- blockmodel(bin_crime, split4)
+# crime.4block <- dist(unique(crime.4block)) 
+# plot(crime.4block, col = c[crime.4block])
+# title("Crime, 4-block split", adj=0)
+
+
+
+```
+
 
 
 ## Nodes and Edge List: Create a Network
@@ -565,7 +637,7 @@ edges <- select(edges, from, to, weight)
 crime_network <- network(edges, vertex.attr = nodes, matrix.type = "edgelist", ignore.eval = FALSE)
 plot(crime_network, vertex.cex =3) #, mode = "circle")
 
-
+#######################
 # library(devtools)
 # require(UserNetR)
 # d <- degree(delito, gmode = "graph")
@@ -592,73 +664,6 @@ gplot(net2, vertex.col = 2, displaylabels = FALSE)
 ```
 
 
-```{r echo=FALSE message=FALSE, warning=FALSE}
-
-# igraph
-# detach(package:network)
-rm(crime_network)
-library(igraph)
-
-
-crime_igraph <- graph_from_data_frame(d = edges, vertices = nodes, directed = TRUE)
-crime_igraph
-
-# plot(crime_igraph, labels = FALSE, edge.arrow.size = .02)
-# plot(crime_igraph, layout = layout_with_graphopt, labels = NULL, edge.arrow.size = 0.5, edge.labels = FALSE)
-
-
-```
-
-```{r echo=FALSE message=FALSE, warning=FALSE}
-# install.packages("tidygraph")
-# install.packages("ggraph")
-library(tidygraph)
-library(ggraph)
-
-crimes_tidy <- tbl_graph(nodes = nodes, edges = edges, directed = TRUE)
-crimes_tidy
-
-# crimes_igraph_tidy <- as_tbl_graph(crime_igraph)
-
-# crimes_igraph_tidy
-# 
-# crimes_tidy
-# 
-class(crimes_tidy)
-# class(crimes_igraph_tidy)
-# class(crime_igraph)
-
-arrangeweight <- crimes_tidy %>% activate(edges) %>% arrange(desc(weight))
-ggraph(crimes_tidy) + geom_edge_link() + geom_node_point() +theme_graph()
-
-ggraph(crimes_tidy, layout = "graphopt") +
-  geom_node_point() +
-  geom_edge_link(aes(width = weight), alpha = .8) +
-  scale_edge_width(range = c(.2, 2)) +
-  # geom_node_circle(aes(color("green"))) +
-  geom_node_text(aes(label = label), repel = TRUE) +
-  labs(edge_width = "crime") + theme_graph()
-
-ggraph(crimes_tidy, layout = "linear") + 
-  geom_edge_arc(aes(width = weight), alpha = 0.8) + 
-  scale_edge_width(range = c(0.2, 2)) +
-  geom_node_text(aes(label = label)) +
-  labs(edge_width = "crime") +
-  theme_graph()
-
-#3d?
-# install.packages("networkD3")
-library(visNetwork)
-library(networkD3)
-
-nodes_d3 <- mutate(nodes, id = id - 1)
-edges_d3 <- mutate(edges, from = from - 1, to = to - 1)
-sankeyNetwork(Links = edges_d3, Nodes = nodes_d3, Source = "from", Target = "to", 
-              NodeID = "label", Value = "weight", fontSize = 16, unit = "crime(s)")
-
-
-```
-
 ##Random Graphs
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 # class(crimes_tidy) # Display the result ## number of random graphs that can be generated given the number of ties
@@ -677,96 +682,9 @@ transitivity(crimes_gnm)
 474/13284.5
 
 
-
-# I want to print two graphs next to each other in the plot screen so ...
-# op <- par(mfrow = c(1,2)) # Set the plots to have 1 row of plots and 2 plots in that row. ##par = parameters
-# plot(crimes_tidy, vertex.color="lightblue", main="First random graph")
-# plot(erdos.renyi.game(163, 474, type="gnm"), vertex.color="beige", main="Second random graph")
-# par(op)
-# graph.density(crimes_tidy)
-# transitivity(crimes_tidy)
-# 
-
-# Demonstrating that, for a large number of nodes (large n),
-#  the network will have approximately a Poisson degree distribution.
-# (For a symmetric network, the "degree distribution" is the proportion of
-#    nodes that have K connections, for each value of K = 0, 1, 2, ...)
-## if the binomial is small, the prob is distributed by the Poisson
-# op <- par(mfrow = c(1,2))
-# # Below, we give a probability that any pair of nodes exhibit a tie (p = .005);
-# #    hence, this is a model of type="gnp" or: G(n, p).
-# # g <- erdos.renyi.game(n = 1000, .005, type="gnp") #create random graph
-# crimes_gnp <- erdos.renyi.game(n=2161, .005, type="gnp")
-# op <- par(mfrow = c(1,1))
-# plot(crimes_gnp)
-# 
-# # In the "plot" statement below, "b" means to show both points AND lines.
-# op <- par(mfrow = c(1,2)) # split plot screen panels
-# plot(degree.distribution(crimes_gnp), type="b", xlab = "Degree", ylab = "Proportion", main = "Observed Degree Distribution")
-# 
-# 
-# # Compare fit of the Poisson distribution, whose mean is the mean degree 
-# #   distribution:
-# (lambda <- mean(degree(crimes_gnp)))
-# k <- 0:14
-# Pois <- (exp(-lambda)) * (lambda^k) / factorial(k)
-# plot(k, (Pois / sum(Pois)), type="b", xlab="Degree", ylab="Proportion", col="forestgreen", main = "Poisson approximation based on mean degree")
-# par(op)
-# 
-# ## fully connected means any node can reach another in some length
-# # Surprisingly, for random graphs, a fully-connected graph tends to emerge
-# #  for even very low values of average degree. If p > (2 * ln(n)) / n, then the
-# #  random graph is likely to be fully-connected ==> THIS BECOMES MORE TRUE
-# #   AS N BECOMES LARGER.
-# # For the example above (where we have 12 nodes), the graph is likely to
-# #  be fully connected if the average probability of a connection between any two
-# #  nodes is greater than
-# (my.prob <- (2 *log(163)) / 163) 
-# 
-# my.N <- 163 ## number of nodes
-# my.p <- .06 ## prob that nodes are connected
-# list.components <- rep(0, 2161) # This initializes a list with 1,000 entries of 0.
-# for (i in 1:2161) { # #what fraction of the 1000 network nodes are fully connected?
-#   c <- components(g <- erdos.renyi.game(n = my.N, p = my.p, type = "gnp")) # number of components
-#   ##                                                                        asking what is the distribution
-#   list.components[i] <- (max(c$csize)) == my.N
-#   # c$size is distribution of sizes of components in the graph. 
-#   # We demand that (the graph has 1 component that contains all the nodes.)
-# }
-# # The proportion of all these graphs that are fully connected is:
-# (sum(list.components == 1)) / length(list.components)
-# 
-# # Suppose we had 120 nodes. Then the graph should tend to be connected for
-# (my.prob <- (2 * log(120)) / 120)
-# # or for my.prob equal to about .08. Run the previous lines again, but using
-# my.N <- 120 # and
-# my.p <- .08
-# 
-# 
-# transitivity(crimes_gnm)
 ```
 
-
-```{r echo=FALSE message=FALSE, warning=FALSE}
-
-# library(reshape2)
-# library(igraph)
-# # 
-# # d_e_Net <- graph.incidence(mtx, mode = c("all"))
-# # plot(d_e_Net) #, vertex.label.cex = .6, vertex.label.color = "black")
-# 
-# library(statnet)
-# 
-# gplot(bin_crime)
-# 
-# source("findindex.r")
-# source("sp.r") # computes the lengths of shortest paths
-# source("holesbin.r")
-# 
-# h <- holesbin(bin_crime)
-
-```
-
+#E-I 
 ```{r echo=FALSE message=FALSE, warning=FALSE}
 
 
@@ -853,8 +771,85 @@ E_I.permtest <- function(M, split,howmany=1000, symmetrize=TRUE) {
   return(out)
 }
 
-E_I.basic(bin_crime, 1:3)
+E_I.basic(crime_mtx, 2)
 
-E_I.permtest(mtx_full, 1:3)
+E_I.permtest(mtx_full, 2)
 ```
+
+```{r}
+# I want to print two graphs next to each other in the plot screen so ...
+# op <- par(mfrow = c(1,2)) # Set the plots to have 1 row of plots and 2 plots in that row. ##par = parameters
+# plot(crimes_tidy, vertex.color="lightblue", main="First random graph")
+# plot(erdos.renyi.game(163, 474, type="gnm"), vertex.color="beige", main="Second random graph")
+# par(op)
+# graph.density(crimes_tidy)
+# transitivity(crimes_tidy)
+# 
+
+# Demonstrating that, for a large number of nodes (large n),
+#  the network will have approximately a Poisson degree distribution.
+# (For a symmetric network, the "degree distribution" is the proportion of
+#    nodes that have K connections, for each value of K = 0, 1, 2, ...)
+## if the binomial is small, the prob is distributed by the Poisson
+# op <- par(mfrow = c(1,2))
+# # Below, we give a probability that any pair of nodes exhibit a tie (p = .005);
+# #    hence, this is a model of type="gnp" or: G(n, p).
+# # g <- erdos.renyi.game(n = 1000, .005, type="gnp") #create random graph
+# crimes_gnp <- erdos.renyi.game(n=2161, .005, type="gnp")
+# op <- par(mfrow = c(1,1))
+# plot(crimes_gnp)
+# 
+# # In the "plot" statement below, "b" means to show both points AND lines.
+# op <- par(mfrow = c(1,2)) # split plot screen panels
+# plot(degree.distribution(crimes_gnp), type="b", xlab = "Degree", ylab = "Proportion", main = "Observed Degree Distribution")
+# 
+# 
+# # Compare fit of the Poisson distribution, whose mean is the mean degree 
+# #   distribution:
+# (lambda <- mean(degree(crimes_gnp)))
+# k <- 0:14
+# Pois <- (exp(-lambda)) * (lambda^k) / factorial(k)
+# plot(k, (Pois / sum(Pois)), type="b", xlab="Degree", ylab="Proportion", col="forestgreen", main = "Poisson approximation based on mean degree")
+# par(op)
+# 
+# ## fully connected means any node can reach another in some length
+# # Surprisingly, for random graphs, a fully-connected graph tends to emerge
+# #  for even very low values of average degree. If p > (2 * ln(n)) / n, then the
+# #  random graph is likely to be fully-connected ==> THIS BECOMES MORE TRUE
+# #   AS N BECOMES LARGER.
+# # For the example above (where we have 12 nodes), the graph is likely to
+# #  be fully connected if the average probability of a connection between any two
+# #  nodes is greater than
+# (my.prob <- (2 *log(163)) / 163) 
+# 
+# my.N <- 163 ## number of nodes
+# my.p <- .06 ## prob that nodes are connected
+# list.components <- rep(0, 2161) # This initializes a list with 1,000 entries of 0.
+# for (i in 1:2161) { # #what fraction of the 1000 network nodes are fully connected?
+#   c <- components(g <- erdos.renyi.game(n = my.N, p = my.p, type = "gnp")) # number of components
+#   ##                                                                        asking what is the distribution
+#   list.components[i] <- (max(c$csize)) == my.N
+#   # c$size is distribution of sizes of components in the graph. 
+#   # We demand that (the graph has 1 component that contains all the nodes.)
+# }
+# # The proportion of all these graphs that are fully connected is:
+# (sum(list.components == 1)) / length(list.components)
+# 
+# # Suppose we had 120 nodes. Then the graph should tend to be connected for
+# (my.prob <- (2 * log(120)) / 120)
+# # or for my.prob equal to about .08. Run the previous lines again, but using
+# my.N <- 120 # and
+# my.p <- .08
+# 
+# 
+# transitivity(crimes_gnm)
+```
+
+
+```{r echo=FALSE message=FALSE, warning=FALSE}
+
+
+
+```
+
 
