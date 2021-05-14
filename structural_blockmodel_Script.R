@@ -155,7 +155,7 @@ my.blockmodel.dis$block.model # This object consists only of the density matrix.
 # group.blockmodel.dis$block.model # This object consists only of the density matrix.
 
 # To represent these visually, we could use the "corrplot" library. (You may need to
-corrplot(my.blockmodel.dis$block.model, is.corr=FALSE, method="square") + title(sub = "Concor: Crime Densities")
+corrplot(my.blockmodel.dis$block.model, labels = rownames(bin_crime), is.corr=FALSE, method="square") + title(sub = "Concor: Crime Densities")
 # corrplot(group.blockmodel.dis$block.model, is.corr=FALSE, method="square") + title(sub = "Predetermined Groups: Dislike Densities")
 # Plot the blockmodel:
 # plot(my.blockmodel.dis)+ title(sub =  "Concor: Crime Densities")

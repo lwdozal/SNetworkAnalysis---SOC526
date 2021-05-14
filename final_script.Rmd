@@ -38,16 +38,18 @@ library("data.table")
 library("lemon")
 
 ```
+## Introduction
+Crime around school neighborhoods has been proven time and time again to hinder the academic performance of students and provide obstacles to success. Understanding how crime increases in neighborhoods for economic reasons, mainly for business and population dense areas can show higher crime rates (Owens, 2016; Twinman, 2017). Stress about crime in neighborhoods not only for students but for their families is also a problem as considerable mental helth issues have been proven to show up (Dustmann et al., 2014). Significant impact on performance, attendance, and long term negative effects have also been proven in cases of extreme crime and violence in school neighborhood areas (Michaelson et al., 2019). But schools have shown to try to deter these effects by implementing volunteer policing program and other community led projects to help stop crime (McMillen, 2019). 
 
-# Methods
-After locating crimes reported to the police in a 150-meter radius around schools in Mexico City, further analysis on their relations to the school could be beneficial for implementing effective programs that help deter future crime around school neighborhoods. For this reason, we how to answer is how do crimes cluster around specific schools and which crimes happen in conjunction with each other? Looking at the data in a spatialized geographic version is helpful to understand which school attract the most crime, or "hot spots", but it will be beneficial to the connections between schools and the crimes that surround them.
+In social network analysis, there has been a lot of research done on criminal networks mainly using bipartite,social networks, social structure, and exponential random graph models (Melamed, 2014; Wang et al., 2011; Alzahrani, 2014). While reviewing the role of neighborhood networks, Faust and Tita suggest looking at the ties in the network are assumed to be doing their roles, and to understand potential weaknessness in the data as well as in potential analysis ( Faust, Tita, 2014).
 
-An example of analyzing geographic space and network space in the same context is provided by Radlil et al. where they use relative location and structural position to connect territorial gang rivalries (Radil et al., 2010). The structural embeddedness and positionality of the geography and the network allow the researchers to get a better understanding of gang violence spread across gang territories based on an actor's position in the network, their relationships, and the spatial settings provided by the observed space. In their case, the territory they study is almost isolated by highways, rivers, and industrial zones in East Los Angeles. Because of a history of area violence stemming from various socio demographic factors, this areas was ripe with gang violence at the time of the study (Radil et al., 2010). To understand embeddedness, they applied a specific methodology where they 1) reviewed the geographic area boundaries, 2) got frequencies of violent crimes per census block, 3) created a rivalry matrix to show which violent crimes are done from different gangs, 4) multiplied both geographic areas and rivalry matrix together from two separate matrix blocks, 5) They then spatialized the social networks by finding subsets, and used CONCOR to find equivalent geographies, 6) A dendrogram and Analysis of Variance (ANOVA) were used along with Geographical Information System (GIS) mapping to review the results (Radil et al., 2010). 
+For this paper a dataset with full location attributes for reported police crimes in Mexico City including longitudal and latitudal elements, time of day, month, and year, street, neighborhood, and ward where the crime took place are available online at data.gob.mx, as well as a dataset with basic school location and school level atrributes found on INEGI. These two datasets were merged and implemented in Geographical Information System (GIS) software to create a buffer of a 150-meter radius around the collected schools and the crime data within those buffers was collected to create the dataset being used for network analysis. Analysis on the relations of crime to schools could be beneficial for implementing effective programs that help deter future crime around school neighborhoods. For this reason, we how to answer is how do crimes cluster around specific schools and which crimes happen in conjunction with each other? Looking at the data in a spatialized geographic version is helpful to understand which school attract the most crime, or "hot spots", but it will be beneficial to the connections between schools and the crimes that surround them.
+
+## Methods
+An example of analyzing geographic space and network space in the same context is provided by Radlil et al. where they use relative location and structural position to connect territorial gang rivalries (Radil et al., 2010). The structural embeddedness and positionality of the geography and the network allow the researchers to get a better understanding of gang violence spread across gang territories based on an actor's position in the network, their relationships, and the spatial settings provided by the observed space. In their case, the territory they study is almost isolated by highways, rivers, and industrial zones in East Los Angeles. Because of a history of area violence stemming from various socio demographic factors, this areas was ripe with gang violence at the time of the study (Radil et al., 2010). To understand embeddedness, they applied a specific methodology where they 1) reviewed the geographic area boundaries, 2) got frequencies of violent crimes per census block, 3) created a rivalry matrix to show which violent crimes are done from different gangs, 4) multiplied both geographic areas and rivalry matrix together from two separate matrix blocks, 5) They then spatialized the social networks by finding subsets, and used CONCOR to find equivalent geographies, 6) A dendrogram and Analysis of Variance (ANOVA) were used along with GIS mapping to review the results (Radil et al., 2010). 
 
 For the crime to school dataset, all crimes are located around a school's 150m radius, and understanding which are more prevalent, or which might happen in conjunction are important explorations. In this case, understanding centrality measures, duality, and bi-dynamic line graphs will help understand the overall clustering of crimes, the between and within crime and school group relations, and the ties between crime and schools. This is done by creating matrix structures of the crime and school labels, converting it into network form, and keeping separate versions. 
 
-
-# Results
 
 ## Creating the Network
 
@@ -330,6 +332,15 @@ gplot(S, edge.lwd = 4*S,
 
 
 ```
+## Conclusion
+
+
+
+
+
+
+_______________________________________________________________________________________________________
+
 
 
 ### Bi-dynamic line graph of school-to-school ties WITHIN crimes (showing first 10)
